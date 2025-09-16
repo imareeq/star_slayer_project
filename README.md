@@ -11,12 +11,12 @@ Now it is up to you and Sidekick to save the world from this evil organisation.
 
 # Mini Games
 
-## Matching Card Memory Game
+## 1. Matching Card Memory Game
 
 **Topic(s) Covered**: AI Hallucination
 
 ### Lore
-* You and Sidekick wander into an abandoned BANK in search of Sidekicks missing part following a lead on his radar.
+* You and Sidekick wander into an abandoned BANK in search of Sidekicks missing memory chip following a lead on his radar.
 * Upon arrival, sidekicks radar homes in on a vault, guarded by (evil org character). Luckily, he is sleeping.
 * Unlock the vault and steal the component inside without waking up the guard. 
 * The vault will start ringing if too many incorrect attempts are made.
@@ -25,3 +25,13 @@ Now it is up to you and Sidekick to save the world from this evil organisation.
 * Sidekick sometimes tells you the wrong card locations. (You can ask sidekick for help sometimes, but they hallucinate sometimes) 
 * Limited number of tries.
 
+## 2. Training Sidekick
+
+**Topic(s) Covered**: Training Model, Bias, Variance, Overfitting, Underfitting, etc.
+
+### Lore
+* Following your successful heist of Sidekick's memory chip from the bank, you have arrived at a factory to mount it into Sidekick's hardware.
+* Suddenly, you hear footsteps and loud noises coming from outside. The enemy had tracked you.
+* You hastily mount the memory chip so Sidekick can figure a way out of the factory. 
+* However, Sidekick's sensors seem to be going haywire, and he begins to glitch.
+* It is now up to you to access his terminal and cleanse the data before the enemy discovers you.
