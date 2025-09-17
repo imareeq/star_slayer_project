@@ -140,9 +140,9 @@ export class LevelSelect extends Scene {
         console.log("levelNumber %d\n", levelNumber);
         if (levelNumber == 1) {
             console.log("Tiggered right\n");
-            this.scene.start('MainMenu');
+            this.scene.start('CardGame');
         } else {
-            this.scene.start('Game');
+            this.scene.start('MainMenu');
 
         }
 	}
