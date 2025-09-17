@@ -13,10 +13,11 @@ import { OptionsMenu } from './scenes/OptionsMenu';
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
 const config: Phaser.Types.Core.GameConfig = {
 	type: AUTO,
-	width: 1024,
-	height: 768,
+	width: 1080,
+	height: 720,
 	parent: 'game-container',
-	backgroundColor: '#028af8',
+	backgroundColor: '#090917',
+    pixelArt: true,
 	scale: {
 		mode: Phaser.Scale.RESIZE,
 		autoCenter: Phaser.Scale.CENTER_BOTH,

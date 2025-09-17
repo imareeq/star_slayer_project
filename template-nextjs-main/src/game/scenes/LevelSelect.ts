@@ -143,7 +143,6 @@ export class LevelSelect extends Scene {
             this.scene.start('CardGame');
         } else {
             this.scene.start('MainMenu');
-
         }
 	}
 
