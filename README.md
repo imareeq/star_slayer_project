@@ -1,6 +1,16 @@
 # star_slayer
 An interactive, story based game to educate you on AI.
 
+# How to use
+| Command | Description |
+|---------|-------------|
+| `npm install` | Install project dependencies |
+| `npm run dev` | Launch a development web server |
+| `npm run build` | Create a production build in the `dist` folder |
+
+`npm run dev` will run a local state of the game in `http://localhost:8080/`
+
+# Intro
 The human race became overdependent on AI. An evil organization (aliens) took advantage of this by planting a bug causing big hallucinations and resulting in the end of humanity as we know it.
 
 However, there is still hope. Scientists had created an indestructible orb of mysterious powers from meteorite fragments as a backup in case AI ever went rogue. Unfortunately, the evil organisation knew about this, and figured out how to dismantle the orb to mitigate its powers.
