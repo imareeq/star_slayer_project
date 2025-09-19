@@ -43,5 +43,7 @@ Now it is up to you and Sidekick to save the world from this evil organisation.
 * Following your successful heist of Sidekick's memory chip from the bank, you have arrived at a factory to mount it into Sidekick's hardware.
 * Suddenly, you hear footsteps and loud noises coming from outside. The enemy had tracked you.
 * You hastily mount the memory chip so Sidekick can figure a way out of the factory. 
-* However, Sidekick's sensors seem to be going haywire, and he begins to glitch.
-* It is now up to you to access his terminal and cleanse the data before the enemy discovers you.
+* However, the data seems to be malicious. Sidekick's sensors seem to be going haywire, and he begins to glitch.
+* Sidekick's Diagnostic system tells you that he has been fed with loads of unverified data, throwing off his
+calibration.
+* It is now up to you to access his terminal and retrain Sidekick with the correct before the enemy discovers you.

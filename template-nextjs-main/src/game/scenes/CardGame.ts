@@ -1,15 +1,9 @@
-import { GameObjects, Scene } from 'phaser';
-import { EventBus } from '../EventBus';
+import { GameObjects, Scene } from "phaser";
+import { EventBus } from "../EventBus";
 
 import { createCard, CardObject } from "../createCard";
-
-interface GridConfiguration {
-    x: number;
-    y: number;
-    paddingX: number;
-    paddingY: number;
-}
-
+import { Dialogue, GridConfiguration } from "./types/Types";
+import { DialogueEngine } from "./DialogueEngine";
 
 export class CardGame extends Scene {
     background: GameObjects.Image;
@@ -20,21 +14,43 @@ export class CardGame extends Scene {
     private cutsceneOverlay!: Phaser.GameObjects.Rectangle;
     private cutsceneText!: Phaser.GameObjects.Text;
     private cutsceneIndex: number = 0;
-    private cutsceneLines: string[] = [
-        "You and Sidekick wander into an abandoned BANK",
-        `in search of Sidekick's missing memory chip,\n 
-        following a lead on his radar.`,
-        "",
-        `Upon arrival, sidekick's radar homes in on a vault,\n
-        guarded by (evil org character). Luckily, he is sleeping.`,
-        "",
-        `Unlock the vault and steal the component inside,\n
-        without waking up the guard.`,
-        "",
-        `The vault will start ringing if too many",\n
-        incorrect attempts are made.`,
-        "",
-        "Click to begin..."
+    private cutsceneLines: Dialogue[] = [
+        {
+            speaker: "Narrator",
+            line: "You and Sidekick wander into an abandoned BANK, in search of Sidekick's missing memory chip, following a lead on his radar.",
+        },
+        {
+            speaker: "Narrator",
+            line: "Upon arrival, Sidekick's radar homes in on a vault...",
+        },
+        {
+            speaker: "Sidekick",
+            line: "That's it. According to my radar, that is where my memory chip is.",
+        },
+        {
+            speaker: "User",
+            line: "Oh boy, how will we get past that evil looking robot though.",
+        },
+        {
+            speaker: "CardEnemy",
+            line: "ZzZzZzz",
+        },
+        {
+            speaker: "Sidekick",
+            line: "I think that robot may be asleep. Should we make a move now?",
+        },
+        {
+            speaker: "User",
+            line: "Looks like we have no choice. Let's try to hack the vault without getting caught. Come give me a hand!",
+        },
+        {
+            speaker: "Sidekick",
+            line: "I will try my best, but my accuracy is low without my memory chip. I might hallucinate at times. Be careful, as the alarm will go off if you fail too many times."
+        },
+        {
+            speaker: "Narrator",
+            line: "Click to begin...",
+        },
     ];
 
     private settingsButton!: Phaser.GameObjects.Rectangle;
@@ -47,22 +63,28 @@ export class CardGame extends Scene {
     private cards: CardObject[] = [];
     private canMove: boolean = false;
     private lives: number = 3; // Assuming a default value; adjust as needed
-    private cardNames: string[] = ["card-0", "card-1", "card-2", "card-3", "card-4", "card-5"]; // Populate with actual card names
+    private cardNames: string[] = [
+        "card-0",
+        "card-1",
+        "card-2",
+        "card-3",
+        "card-4",
+        "card-5",
+    ]; // Populate with actual card names
     private gridConfiguration: GridConfiguration = {
         x: 0,
         y: 0,
         paddingX: 10,
-        paddingY: 10
+        paddingY: 10,
     };
 
-    init ()
-    {
+    init() {
         this.cameras.main.fadeIn(500);
         this.lives = 5;
     }
 
     constructor() {
-        super('CardGame');
+        super("CardGame");
     }
 
     preload() {
@@ -78,7 +100,7 @@ export class CardGame extends Scene {
         // this.load.audio("card-mismatch", "audio/card-mismatch.mp3");
         // this.load.audio("card-slide", "audio/card-slide.mp3");
         // this.load.audio("victory", "audio/victory.mp3");
-        this.load.image('cardgame-bg', 'card_lore_bg.png');
+        this.load.image("cardgame-bg", "card_lore_bg.png");
         this.load.image("minigame-background", "card_minigame_bg.png");
         this.load.image("card-back", "card_unopened.png");
         this.load.image("card-0", "./card_faces/face_1.png");
@@ -90,123 +112,156 @@ export class CardGame extends Scene {
         this.load.image("card-6", "./card_faces/face_7.png");
         this.load.image("card-7", "./card_faces/face_8.png");
         this.load.image("heart", "pixel_heart.png");
+        this.load.image("card-enemy-sleep", "CardGameEnemyAsleep.png");
+        this.load.image("card-enemy-awake", "CardGameEnemyAwake.png");
+
+        this.load.setPath("assets/");
+        this.load.image("player", "Player.png");
+        this.load.image("sidekick", "Sidekick.png");
+        this.load.image("dialogue-box-left", "DialogueBoxLeft.png");
+        this.load.image("dialogue-box-right", "DialogueBoxRight.png");
     }
 
     create() {
         this.cutsceneIndex = 0;
-        this.events.once('shutdown', this.cleanup, this);
-        this.background = this.add.image(512, 384, 'cardgame-bg');
+        this.events.once("shutdown", this.cleanup, this);
+        this.background = this.add.image(0, 0, "cardgame-bg");
 
         // Create settings button
         this.createSettingsButton();
 
         // Create focus indicator
-        this.focusIndicator = this.add.rectangle(0, 0, 310, 65, 0xffff00, 0)
-        .setStrokeStyle(2, 0xffff00)
+        this.focusIndicator = this.add
+            .rectangle(0, 0, 310, 65, 0xffff00, 0)
+            .setStrokeStyle(2, 0xffff00)
             .setVisible(false)
             .setDepth(10000);
 
         const canvas = this.game.canvas as HTMLCanvasElement;
         if (canvas) {
-        canvas.setAttribute('tabindex', '0');
-        canvas.focus();
-            this.canvasClickHandler = () => {
+            canvas.setAttribute("tabindex", "0");
             canvas.focus();
-                console.log('Canvas focused via click (CardGame)');
+            this.canvasClickHandler = () => {
+                canvas.focus();
+                console.log("Canvas focused via click (CardGame)");
             };
-            canvas.addEventListener('click', this.canvasClickHandler);
+            canvas.addEventListener("click", this.canvasClickHandler);
         }
 
         // Handle Q key for pause menu
-        this.input.keyboard?.on('keydown-Q', () => {
+        this.input.keyboard?.on("keydown-Q", () => {
             this.togglePauseMenu();
         });
 
         // Responsive layout
         this.layout();
-        this.scale.on('resize', this.layout, this);
+        this.scale.on("resize", this.layout, this);
 
-        // Start cutscene
-        this.startCutscene();
-        
-        EventBus.emit('current-scene-ready', this);
+        const cutsceneEngine: DialogueEngine = new DialogueEngine(
+            this,
+            this.cutsceneLines
+        );
+
+        cutsceneEngine.start();
+
+        EventBus.emit("current-scene-ready", this);
     }
 
     private createSettingsButton() {
-        this.settingsButton = this.add.rectangle(0, 0, 80, 40, 0x333333)
+        this.settingsButton = this.add
+            .rectangle(0, 0, 80, 40, 0x333333)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.togglePauseMenu())
-            .on('pointerover', () => this.settingsButton.setFillStyle(0x444444))
-            .on('pointerout', () => this.settingsButton.setFillStyle(0x333333))
+            .on("pointerdown", () => this.togglePauseMenu())
+            .on("pointerover", () => this.settingsButton.setFillStyle(0x444444))
+            .on("pointerout", () => this.settingsButton.setFillStyle(0x333333))
             .setDepth(10001);
 
-        this.settingsText = this.add.text(0, 0, 'Settings', {
-            fontFamily: 'Arial',
-            fontSize: '14px',
-            color: '#ffffff'
-        }).setOrigin(0.5).setDepth(10002);
+        this.settingsText = this.add
+            .text(0, 0, "Settings", {
+                fontFamily: "Arial",
+                fontSize: "14px",
+                color: "#ffffff",
+            })
+            .setOrigin(0.5)
+            .setDepth(10002);
     }
 
     private createPauseMenu() {
         // Semi-transparent overlay
-        this.pauseOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.5)
+        this.pauseOverlay = this.add
+            .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.5)
             .setOrigin(0, 0)
             .setDepth(15000);
 
         // Menu container
-        this.pauseMenu = this.add.container(this.scale.width / 2, this.scale.height / 2);
+        this.pauseMenu = this.add.container(
+            this.scale.width / 2,
+            this.scale.height / 2
+        );
         this.pauseMenu.setDepth(15001);
 
         // Menu background
-        const menuBg = this.add.rectangle(0, 0, 300, 200, 0x222222)
+        const menuBg = this.add
+            .rectangle(0, 0, 300, 200, 0x222222)
             .setStrokeStyle(2, 0xffffff);
         this.pauseMenu.add(menuBg);
 
         // Menu title
-        const title = this.add.text(0, -70, 'Pause Menu', {
-            fontFamily: 'Arial Black',
-            fontSize: '24px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        const title = this.add
+            .text(0, -70, "Pause Menu", {
+                fontFamily: "Arial Black",
+                fontSize: "24px",
+                color: "#ffffff",
+            })
+            .setOrigin(0.5);
         this.pauseMenu.add(title);
 
         // Resume button
-        const resumeBtn = this.add.rectangle(0, -20, 200, 40, 0x0070f3)
+        const resumeBtn = this.add
+            .rectangle(0, -20, 200, 40, 0x0070f3)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.togglePauseMenu());
+            .on("pointerdown", () => this.togglePauseMenu());
         this.pauseMenu.add(resumeBtn);
 
-        const resumeText = this.add.text(0, -20, 'Resume', {
-            fontFamily: 'Arial Black',
-            fontSize: '18px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        const resumeText = this.add
+            .text(0, -20, "Resume", {
+                fontFamily: "Arial Black",
+                fontSize: "18px",
+                color: "#ffffff",
+            })
+            .setOrigin(0.5);
         this.pauseMenu.add(resumeText);
 
         // Restart button
-        const restartBtn = this.add.rectangle(0, 30, 200, 40, 0x0070f3)
+        const restartBtn = this.add
+            .rectangle(0, 30, 200, 40, 0x0070f3)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.restartScene());
+            .on("pointerdown", () => this.restartScene());
         this.pauseMenu.add(restartBtn);
 
-        const restartText = this.add.text(0, 30, 'Restart', {
-            fontFamily: 'Arial Black',
-            fontSize: '18px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        const restartText = this.add
+            .text(0, 30, "Restart", {
+                fontFamily: "Arial Black",
+                fontSize: "18px",
+                color: "#ffffff",
+            })
+            .setOrigin(0.5);
         this.pauseMenu.add(restartText);
 
         // Level Select button
-        const levelSelectBtn = this.add.rectangle(0, 80, 200, 40, 0x0070f3)
+        const levelSelectBtn = this.add
+            .rectangle(0, 80, 200, 40, 0x0070f3)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.start('LevelSelect'))
+            .on("pointerdown", () => this.scene.start("LevelSelect"));
         this.pauseMenu.add(levelSelectBtn);
 
-        const levelSelectText = this.add.text(0, 80, 'Level Select', {
-            fontFamily: 'Arial Black',
-            fontSize: '18px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        const levelSelectText = this.add
+            .text(0, 80, "Level Select", {
+                fontFamily: "Arial Black",
+                fontSize: "18px",
+                color: "#ffffff",
+            })
+            .setOrigin(0.5);
         this.pauseMenu.add(levelSelectText);
     }
 
@@ -227,57 +282,6 @@ export class CardGame extends Scene {
         this.isPaused = false;
         this.cutsceneIndex = 0;
         this.scene.restart();
-    }
-
-    private startCutscene() {
-        // Create grayed overlay
-        this.cutsceneOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.7)
-            .setOrigin(0, 0)
-            .setDepth(5000);
-
-        // Create text display
-        this.cutsceneText = this.add.text(this.scale.width / 2, this.scale.height / 2, '', {
-            fontFamily: 'Arial Black',
-            fontSize: '24px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 4,
-            align: 'center',
-            wordWrap: { width: this.scale.width * 0.8 }
-        }).setOrigin(0.5).setDepth(5001);
-
-        // Show first line
-        this.showCutsceneLine();
-
-        // Handle clicks to advance
-        this.input.on('pointerdown', this.advanceCutscene, this);
-    }
-
-    private showCutsceneLine() {
-        if (this.cutsceneIndex < this.cutsceneLines.length) {
-            this.cutsceneText.setText(this.cutsceneLines[this.cutsceneIndex]);
-        }
-    }
-
-    private advanceCutscene = () => {
-        // Don't advance cutscene if paused
-        if (this.isPaused) return;
-
-        this.cutsceneIndex++;
-        if (this.cutsceneIndex >= this.cutsceneLines.length) {
-            // End cutscene
-            this.endCutscene();
-        } else {
-            this.showCutsceneLine();
-        }
-    };
-
-    private endCutscene() {
-        this.cutsceneOverlay.destroy();
-        this.cutsceneText.destroy();
-        this.input.off('pointerdown', this.advanceCutscene, this);
-        // Game logic starts here
-        // this.startGame();
     }
 
     private layout = () => {
@@ -388,7 +392,6 @@ export class CardGame extends Scene {
     //     });
     // }
 
-
     // volumeButton ()
     // {
     //     // const volumeIcon = this.add.image(25, 25, "volume-icon").setName("volume-icon");
@@ -403,7 +406,6 @@ export class CardGame extends Scene {
     //     //     console.log("Mouse leave");
     //     //     this.input.setDefaultCursor("default");
     //     // });
-
 
     //     // volumeIcon.on(Phaser.Input.Events.POINTER_DOWN, () => {
     //     //     if (this.sound.volume === 0) {
@@ -556,7 +558,6 @@ export class CardGame extends Scene {
 
     //     });
 
-
     //     // Text events
     //     winnerText.on(Phaser.Input.Events.POINTER_OVER, () => {
     //         winnerText.setColor("#FF7F50");
@@ -603,14 +604,13 @@ export class CardGame extends Scene {
     private cleanup() {
         const canvas = this.game.canvas as HTMLCanvasElement;
         if (canvas && this.canvasClickHandler) {
-            canvas.removeEventListener('click', this.canvasClickHandler);
+            canvas.removeEventListener("click", this.canvasClickHandler);
             this.canvasClickHandler = undefined;
         }
-        this.endCutscene();
         this.isPaused = false;
         this.cutsceneIndex = 0;
-        this.scale.off('resize', this.layout, this);
-        this.input.off('pointerdown', this.advanceCutscene, this);
-        this.input.keyboard?.off('keydown-Q');
+        this.scale.off("resize", this.layout, this);
+        this.input.keyboard?.off("keydown-Q");
     }
 }
+

@@ -138,10 +138,12 @@ export class LevelSelect extends Scene {
 	private startLevel(levelNumber: number) {
 		// Placeholder: start the core game scene
         console.log("levelNumber %d\n", levelNumber);
-        if (levelNumber == 1) {
+        if (levelNumber === 1) {
             console.log("Tiggered right\n");
             this.scene.start('CardGame');
-        } else {
+        } else if (levelNumber === 2) {
+			this.scene.start('DataTrainingGame')
+		} else {
             this.scene.start('MainMenu');
         }
 	}

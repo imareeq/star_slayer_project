@@ -8,6 +8,7 @@ import { SaveMenu } from './scenes/SaveMenu';
 import { CardGame } from './scenes/CardGame';
 import { LevelSelect } from './scenes/LevelSelect';
 import { OptionsMenu } from './scenes/OptionsMenu';
+import { DataTrainingGame } from './scenes/DataTrainingGame';
 
 //  Find out more information about the Game Config at:
 //  https://newdocs.phaser.io/docs/3.70.0/Phaser.Types.Core.GameConfig
@@ -32,6 +33,7 @@ const config: Phaser.Types.Core.GameConfig = {
 		MainGame,
 		GameOver,
 		CardGame,
+		DataTrainingGame
 	]
 };
 
