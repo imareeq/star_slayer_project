@@ -34,9 +34,12 @@
         "react-dom": "19.0.0"
     },
     "devDependencies": {
+        "@next/eslint-plugin-next": "^15.5.3",
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",
+        "eslint": "^9.36.0",
+        "eslint-config-next": "^15.5.3",
         "typescript": "^5"
     }
 }
