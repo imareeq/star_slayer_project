@@ -12,7 +12,9 @@ export class DialogueEngine {
         User: { entityAsset: "player", boxAsset: "dialogue-box-left" },
         Sidekick: { entityAsset: "sidekick", boxAsset: "dialogue-box-right" },
         Narrator: { entityAsset: "", boxAsset: "dialogue-box-left" },
-        CardEnemy: { entityAsset: "card-enemy-sleep", boxAsset: "dialogue-box-right", },
+        EnemySleep_Level_1: { entityAsset: "card-enemy-sleep", boxAsset: "dialogue-box-right", },
+        EnemyAwake_Level_1 : {entityAsset: "card-enemy-awake", boxAsset: "dialogue-box-right", },
+
     };
 
     constructor(scene: Phaser.Scene, lines: Dialogue[]) {
@@ -101,7 +103,7 @@ export class DialogueEngine {
         this.textBox.add(dialogueBox);
         this.textBox.add(dialogueText);
 
-        if (line.speaker === "Sidekick" || line.speaker === "CardEnemy") {
+        if (line.speaker === "Sidekick" || line.speaker === "EnemySleep_Level_1" || line.speaker === "EnemyAwake_Level_1") {
             const charX =
                 screenWidth -
                 padding -
