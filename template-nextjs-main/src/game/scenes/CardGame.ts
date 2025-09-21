@@ -110,6 +110,8 @@ private cutsceneLinesGameOver: Dialogue[] = [
     private canMove: boolean = false;
     private lives: number = 3;
     private cardNames: string[] = ["card-0", "card-1", "card-2", "card-3", "card-4", "card-5", "card-6", "card-7"];
+    private defualtNumTry = 2
+    private numTryBeforeDamage = this.defualtNumTry;
 
     private gridConfiguration: GridConfiguration = {
         x: 0,
@@ -398,7 +400,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
             if (card === this.cardOpened || !card.isFaceDown()) return;
 
             this.canMove = false;
-            card.flip(() => {
+            card.flip(false, () => {
                 if (this.cardOpened) {
                     if (this.cardOpened.cardName === card.cardName) {
                         this.cardOpened.destroy();
@@ -408,28 +410,33 @@ private cutsceneLinesGameOver: Dialogue[] = [
                         this.canMove = true;
                         this.checkWinCondition();
                     } else {
-                        this.lives--;
-                        const heartToRemove = this.heartImages.pop();
-
-                        if (heartToRemove) {
-                            this.add.tween({
-                                targets: heartToRemove,
-                                y: heartToRemove.y - 100,
-                                alpha: 0,
-                                duration: 300,
-                                onComplete: () => {
-                                    if (heartToRemove && heartToRemove.active) {
-                                        heartToRemove.destroy();
-                                    }
-                                },
-                            });
+                        if (this.numTryBeforeDamage <= 1) {
+                            this.numTryBeforeDamage = this.defualtNumTry;
+                            this.lives--;
+                            const heartToRemove = this.heartImages.pop();
+    
+                            if (heartToRemove) {
+                                this.add.tween({
+                                    targets: heartToRemove,
+                                    y: heartToRemove.y - 100,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => {
+                                        if (heartToRemove && heartToRemove.active) {
+                                            heartToRemove.destroy();
+                                        }
+                                    },
+                                });
+                            }
+                        } else {
+                            this.numTryBeforeDamage -= 1;
                         }
 
                         this.cameras.main.shake(300, 0.01);
 
                         this.time.delayedCall(500, () => {
-                            card.flip();
-                            this.cardOpened?.flip(() => {
+                            card.flip(false);
+                            this.cardOpened?.flip(false,() => {
                                 this.cardOpened = undefined;
                                 this.canMove = true;
                                 this.checkLossCondition();
@@ -561,7 +568,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
                 // Flip cards and reset loading state when all are done
                 let completedFlips = 0;
                 cardsToFlip.forEach(card => {
-                    card.flip(() => {
+                    card.flip(true, () => {
                         completedFlips++;
                         if (completedFlips === cardsToFlip.length) {
                             this.isPeekLoading = false;
@@ -587,7 +594,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
                 // Flip cards and reset loading state when all are done
                 let completedFlips = 0;
                 cardsToFlip.forEach(card => {
-                    card.flip(() => {
+                    card.flip(true, () => {
                         completedFlips++;
                         if (completedFlips === cardsToFlip.length) {
                             this.isPeekLoading = false;

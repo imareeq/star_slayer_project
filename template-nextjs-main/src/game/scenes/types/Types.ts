@@ -31,7 +31,7 @@ export interface CreateCardConfig {
 
 export interface CardObject {
     gameObject: Phaser.GameObjects.Container;
-    flip: (callbackComplete?: () => void) => void;
+    flip: (isHallucinate:boolean, callbackComplete?: () => void) => void;
     destroy: () => void;
     cardName: string;
     hasFaceAt: (x: number, y: number) => boolean;
