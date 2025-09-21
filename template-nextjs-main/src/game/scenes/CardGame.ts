@@ -65,36 +65,40 @@ export class CardGame extends Scene {
         },
     ];
 
-    private cutsceneLinesGameOver: Dialogue[] = [
-        {
-            speaker: "EnemySleep_Level_1",
-            line: "zzzZZZzz...",
-        },
-        {
-            speaker: "Narrator",
-            line: "You run out of tries, vault intruder alert was triggered",
-        },
-        {
-            speaker: "EnemyAwake_Level_1",
-            line: "Huh, What's going on?!?!?",
-        },
-        {
-            speaker: "User",
-            line: "Oh no, lets get out of here",
-        },
-        {
-            speaker: "Sidekick",
-            line: "Aye Aye Captain",
-        },
-        {
-            speaker: "EnemyAwake_Level_1",
-            line: "STOP RUNNING, YOU CAN'T GET AWAY FROM ME THAT EASILY!!",
-        },
-        {
-            speaker: "User",
-            line: "AAAAAAAAAAA",
-        },
-    ];
+private cutsceneLinesGameOver: Dialogue[] = [
+    {
+        speaker: "EnemySleep_Level_1",
+        line: "ZzZ... *twitch* ...ZzZ...",
+    },
+    {
+        speaker: "Narrator",
+        line: "Your final attempt to hack the vault fails. A piercing siren blares, and red lights flood the bank!",
+    },
+    {
+        speaker: "EnemyAwake_Level_1",
+        line: "WHO DARES DISTURB MY SLUMBER?! Intruders in the vault!",
+    },
+    {
+        speaker: "Sidekick",
+        line: "Oh no, my sensors are going haywire! That robot's awake, and it's NOT happy!",
+    },
+    {
+        speaker: "Narrator",
+        line: "The ground shakes as the massive robot lurches toward you, its eyes glowing with menace.",
+    },
+    {
+        speaker: "EnemyAwake_Level_1",
+        line: "You thought you could steal from MY vault? You'll pay for this!",
+    },
+    {
+        speaker: "Sidekick",
+        line: "Captain, we're out of time! Run, or we're scrap metal!",
+    },
+    {
+        speaker: "Narrator",
+        line: "You and Sidekick sprint for the exit, but the robot's thundering steps are right behind you...",
+    },
+];
 
     // --- Game Logic Properties ---
     private cardOpened?: CardObject;
