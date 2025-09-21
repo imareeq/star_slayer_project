@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const {
       query = '',
       data = '',
-      model = 'sonar',
+      model = 'llama-3.3-70b',
       messages,
       systemPrompt = 'You are an AI assistant that helps make decisions based on provided data.',
       userPrompt,
@@ -29,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Data provided: ${data}\n`)
     console.log(`Model: ${model}\n`)
     
-    const apiKey = process.env.PERPLEXITY_API_KEY || ''
+    const apiKey = process.env.NEXT_CEREBRAS_API_KEY || ''
     
     if (!apiKey) {
       return res.status(500).json({ 
@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     try {
-      const url = `https://api.perplexity.ai/chat/completions`
+      const url = `https://api.cerebras.ai/v1/chat/completions`
       const headers: Record<string, string> = {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
@@ -67,6 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             role: "user", 
             content: finalUserPrompt
           }
+
         ]
       }
       
