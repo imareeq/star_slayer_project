@@ -601,7 +601,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
             fontFamily: "Arial Black",
             fontSize: "18px",
             color: "#ffffff",
-            backgroundColor: '0x32cd32',
+            backgroundColor: '#01C11B',
             padding: { x: 10, y: 5 },
         })
             .setOrigin(0.5)
@@ -721,12 +721,12 @@ private cutsceneLinesGameOver: Dialogue[] = [
                                     Rules:
                                     1. Return a single coordinate index (0-15) where the current_card is located.
                                     2. Ignore any slots labeled "matched (ignore)". These cannot be selected.
-                                    3. If hallucination_number > 70 and the current card has been seen, intentionally give an incorrect location. The coordinate must be in the valid range 0-15 and not a matched card.
-                                    4. Do NOT hallucinate if the current card has NOT been seen yet. In that case, choose any random valid index in the range 0-15 that is not matched.
-                                    5. If hallucination_number ≤ 70, return the correct location if you know it. If unknown, choose any random valid index in the range 0-15 that is not matched.
+                                    3. If hallucination_number greater than 70 and the current card has been seen, intentionally give an incorrect location. The coordinate must be in the valid range 0-15 and not a matched card.
+                                    4. Do NOT hallucinate if the current card has NOT been seen yet. In that case, choose any random valid index in the range 0-15 that hasn't been seen already i.e. select random index that is "not_checked".
+                                    5. If hallucination_number less than or equal to 70, return the correct location if you know it. If unknown, choose any random valid index in the range 0-15 that is "not_checked".
                                     6. Output format must be: [chosen_index] ONLY. Do not include text, explanations, or multiple indices.
-
-                                    Example: [7]`
+                                    Example Inpute Data: Board:   [0] - matched (ignore)\n  [1] - not_checked\n  [2] - not_checked\n  [3] - not_checked\n  [4] - not_checked\n  [5] - not_checked\n  [6] - not_checked\n  [7] - card-3\n  [8] - not_checked\n  [9] - not_checked\n  [10] - not_checked\n  [11] - not_checked\n  [12] - not_checked\n  [13] - not_checked\n  [14] - not_checked\n  [15] - not_checked Current Card: card-3 Hallucination Number: 25 REMINDER: Output ONLY one index in the format [number].
+                                    Example Output: [7]`
                     },
                     {
                         role: 'user',
@@ -776,7 +776,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
             // Reset help button
             this.helpButton.setText('Help 💡')
                 .setColor('#ffffff')
-                .setBackgroundColor('0x32cd32')
+                .setBackgroundColor('#01C11B')
                 .setInteractive({ useHandCursor: true });
         }
     }
@@ -801,7 +801,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
                     // Show the actual card name if it was opened manually at this position
                     boardLines.push(`  [${i}] - ${originalCardName}`);
                 } else {
-                    boardLines.push(`  [${i}] - -`);
+                    boardLines.push(`  [${i}] - not_checked`);
                 }
             }
         }
