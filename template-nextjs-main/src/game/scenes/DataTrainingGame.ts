@@ -190,6 +190,7 @@ export class DataTrainingGame extends Scene {
         this.createMinigameTerminal();
         this.createProgressBar(this.currentProgress);
         this.createPromptCounter();
+        this.createPromptText();
         this.currentPromptIndex = 0;
         this.createSubmitBtn();
         this.createSettingsButton();
@@ -224,7 +225,8 @@ export class DataTrainingGame extends Scene {
             if (!this.prompts) {
                 await this.trainingDataPromise;
             }
-            this.createPromptText(this.currentPromptIndex);
+            
+            this.promptText.setText(this.prompts[0].prompt_text)
 
             this.events.once("promptTextLoaded", this.layout, this);
 
@@ -423,13 +425,13 @@ export class DataTrainingGame extends Scene {
             .setVisible(false);
     }
 
-    private createPromptText(promptId: number) {
+    private createPromptText() {
         if (this.promptText) {
             this.promptText.destroy();
         }
 
         this.promptText = this.add
-            .text(0, 0, this.prompts[this.currentPromptIndex].prompt_text, {
+            .text(0, 0, "Loading", {
                 fontFamily: "Arial",
                 fontSize: "24px",
                 color: "#ffffff",
