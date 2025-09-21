@@ -5,10 +5,9 @@ import { EventBus } from '../EventBus';
 export class MainMenu extends Scene
 {
 	background: GameObjects.Image;
-	logo: GameObjects.Image;
 	menu: GameObjects.Text;
 	option: GameObjects.Text;
-	logoTween: Phaser.Tweens.Tween | null;
+	title: GameObjects.Text;
 	private buttons: Phaser.GameObjects.Rectangle[] = [];
 	private focusIndex: number = -1;
 	private focusIndicator!: Phaser.GameObjects.Rectangle;
@@ -24,7 +23,43 @@ export class MainMenu extends Scene
 		this.events.once('shutdown', this.cleanup, this);
 		this.background = this.add.image(512, 384, 'background');
 
-		this.logo = this.add.image(512, 300, 'logo').setDepth(100);
+		const titleText = 'AI Armageddon';
+
+		// Add large text to the scene
+		this.title = this.add.text(
+		this.cameras.main.centerX, // Center horizontally
+		this.cameras.main.centerY - 100, // Position slightly above center vertically
+		titleText,
+		{
+			fontFamily: 'Arial Black', 
+			fontSize: 72,
+			color: '#ffffff', 
+			stroke: '#000000', 
+			strokeThickness: 8, 
+			align: 'center', 
+			shadow: {
+			offsetX: 2,
+			offsetY: 2,
+			color: '#000000',
+			blur: 4,
+			stroke: true,
+			fill: true,
+			},
+		}
+		);
+
+		// Center the text anchor (pivot point)
+		this.title.setOrigin(0.5, 0.5);
+
+		// Optional: Add a simple animation (e.g., scale pulse)
+		this.tweens.add({
+		targets: this.title,
+		scale: 1.05,
+		duration: 1000,
+		yoyo: true, // Makes it scale up and back
+		repeat: -1, // Repeat indefinitely
+		ease: 'Sine.easeInOut',
+		});
 
 		this.menu = this.add.text(512, 435, 'Start', {
 			fontFamily: 'Arial Black', fontSize: 38, color: '#ffffff',
@@ -97,7 +132,7 @@ export class MainMenu extends Scene
 		this.background.setDisplaySize(w, h);
 
 		// Keep original relative positions by percentages of 1024x768
-		this.logo.setPosition(w * (512/1024), h * (300/768));
+		this.title.setPosition(w * 0.5, h * (275/768));
 		this.menu.setPosition(w * 0.5, h * (435/768));
 		this.buttons[0].setPosition(w * 0.5, h * (435/768));
 		this.option.setPosition(w * 0.5, h * (535/768));
@@ -118,53 +153,6 @@ export class MainMenu extends Scene
 		const b = button.getBounds();
 		this.focusIndicator.setSize(b.width, b.height);
 		this.focusIndicator.setPosition(b.centerX, b.centerY).setVisible(true);
-	}
-
-
-	
-	changeScene ()
-	{
-		if (this.logoTween)
-		{
-			this.logoTween.stop();
-			this.logoTween = null;
-		}
-
-		this.scene.start('Game');
-	}
-
-	moveLogo (reactCallback: ({ x, y }: { x: number, y: number }) => void)
-	{
-		if (this.logoTween)
-		{
-			if (this.logoTween.isPlaying())
-			{
-				this.logoTween.pause();
-			}
-			else
-			{
-				this.logoTween.play();
-			}
-		} 
-		else
-		{
-			this.tweens.add({
-				targets: this.logo,
-				x: { value: 750, duration: 3000, ease: 'Back.easeInOut' },
-				y: { value: 80, duration: 1500, ease: 'Sine.easeOut' },
-				yoyo: true,
-				repeat: -1,
-				onUpdate: () => {
-					if (reactCallback)
-					{
-						reactCallback({
-							x: Math.floor(this.logo.x),
-							y: Math.floor(this.logo.y)
-						});
-					}
-				}
-			});
-		}
 	}
 
 	private cleanup() {

@@ -744,7 +744,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
 
             console.log('Sending request to API:', requestBody);
 
-            const response = await fetch('/api/requestAI', {
+            const response = await fetch('/api/cardGameAIReq', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
