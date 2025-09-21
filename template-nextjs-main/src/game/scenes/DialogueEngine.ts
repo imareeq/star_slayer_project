@@ -1,3 +1,4 @@
+import { EventBus } from "../EventBus";
 import { Dialogue, EntityType, TextBoxAssets } from "./types/Types";
 
 export class DialogueEngine {
@@ -32,7 +33,7 @@ export class DialogueEngine {
                 this.scene.scale.width,
                 this.scene.scale.height,
                 0x000000,
-                0.7
+                0.0
             )
             .setOrigin(0, 0)
             .setDepth(5000)
