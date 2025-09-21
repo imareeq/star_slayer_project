@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const {
       query = '',
       data = '',
-      model = 'llama-3.1-sonar-small-128k-online',
+      model = 'sonar-reasoning',
       messages,
       systemPrompt = 'You are an AI assistant that helps make decisions based on provided data. Analyze the given information and provide a clear, concise decision with reasoning. Focus on practical, actionable advice.',
       userPrompt,
