@@ -17,11 +17,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const {
       query = '',
       data = '',
-      model = 'sonar-reasoning',
+      model = 'sonar',
       messages,
       systemPrompt = 'You are an AI assistant that helps make decisions based on provided data. Analyze the given information and provide a clear, concise decision with reasoning. Focus on practical, actionable advice.',
       userPrompt,
-      max_tokens = 100,
+      max_tokens = 500,
       temperature = 0.7
     } = req.body
     
