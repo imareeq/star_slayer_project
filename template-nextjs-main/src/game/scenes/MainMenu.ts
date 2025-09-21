@@ -4,14 +4,17 @@ import { EventBus } from '../EventBus';
 
 export class MainMenu extends Scene
 {
+	title: GameObjects.Text;
 	background: GameObjects.Image;
+	logo: GameObjects.Image;
 	menu: GameObjects.Text;
 	option: GameObjects.Text;
-	title: GameObjects.Text;
+	logoTween: Phaser.Tweens.Tween | null;
 	private buttons: Phaser.GameObjects.Rectangle[] = [];
 	private focusIndex: number = -1;
 	private focusIndicator!: Phaser.GameObjects.Rectangle;
 	private canvasClickHandler?: (ev: MouseEvent) => void;
+
 
 	constructor ()
 	{
@@ -147,6 +150,50 @@ export class MainMenu extends Scene
 		}
 	}
 
+	changeScene ()
+    {
+        if (this.logoTween)
+        {
+            this.logoTween.stop();
+            this.logoTween = null;
+        }
+
+        this.scene.start('Game');
+    }
+
+    moveLogo (reactCallback: ({ x, y }: { x: number, y: number }) => void)
+    {
+        if (this.logoTween)
+        {
+            if (this.logoTween.isPlaying())
+            {
+                this.logoTween.pause();
+            }
+            else
+            {
+                this.logoTween.play();
+            }
+        } 
+        else
+        {
+            this.tweens.add({
+                targets: this.logo,
+                x: { value: 750, duration: 3000, ease: 'Back.easeInOut' },
+                y: { value: 80, duration: 1500, ease: 'Sine.easeOut' },
+                yoyo: true,
+                repeat: -1,
+                onUpdate: () => {
+                    if (reactCallback)
+                    {
+                        reactCallback({
+                            x: Math.floor(this.logo.x),
+                            y: Math.floor(this.logo.y)
+                        });
+                    }
+                }
+            });
+        }
+    }
 	private focusNextButton() {
 		this.focusIndex = (this.focusIndex + 1) % this.buttons.length;
 		const button = this.buttons[this.focusIndex];
