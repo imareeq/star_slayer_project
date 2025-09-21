@@ -20,6 +20,7 @@ export class CardGame extends Scene {
     private isPaused: boolean = false;
     private peekButton!: GameObjects.Text;
     private isPeekMode: boolean = false;
+    private isPeekLoading: boolean = false;
 
     // --- Cutscene Elements ---
     private canvasClickHandler?: (ev: MouseEvent) => void;
@@ -538,35 +539,62 @@ private cutsceneLinesGameOver: Dialogue[] = [
     }
 
     private togglePeekMode() {
-        if (!this.canMove || this.isPaused) return;
+        if (!this.canMove || this.isPaused || this.isPeekLoading) return;
 
         this.isPeekMode = !this.isPeekMode;
-
+        
+        console.log(this.isPeekLoading)
         if (this.isPeekMode) {
+            this.isPeekLoading = true;
             console.log('Peek mode ACTIVATED.');
             this.peekButton.setText('Exit Peek ✖️')
                 .setColor('#FFC0CB')
                 .setBackgroundColor('#8B0000');
             
             // Open all cards that are currently face down
-            this.cards.forEach(card => {
-                if (card.isFaceDown()) {
-                    card.flip();
-                }
-            });
+            const cardsToFlip = this.cards.filter(card => card.isFaceDown());
+            
+            if (cardsToFlip.length === 0) {
+                // No cards to flip, immediately reset loading state
+                this.isPeekLoading = false;
+            } else {
+                // Flip cards and reset loading state when all are done
+                let completedFlips = 0;
+                cardsToFlip.forEach(card => {
+                    card.flip(() => {
+                        completedFlips++;
+                        if (completedFlips === cardsToFlip.length) {
+                            this.isPeekLoading = false;
+                        }
+                    });
+                });
+            }
 
         } else {
+            this.isPeekLoading = true;
             console.log('Peek mode DEACTIVATED.');
             this.peekButton.setText('Peek 🔍')
                 .setColor('#ffffff')
                 .setBackgroundColor('#333333');
 
             // Close all cards that are currently face up
-            this.cards.forEach(card => {
-                if (!card.isFaceDown()) {
-                    card.flip();
-                }
-            });
+            const cardsToFlip = this.cards.filter(card => !card.isFaceDown() && card !== this.cardOpened);
+            
+            if (cardsToFlip.length === 0) {
+                // No cards to flip, immediately reset loading state
+                this.isPeekLoading = false;
+            } else {
+                // Flip cards and reset loading state when all are done
+                let completedFlips = 0;
+                cardsToFlip.forEach(card => {
+                    card.flip(() => {
+                        completedFlips++;
+                        if (completedFlips === cardsToFlip.length) {
+                            this.isPeekLoading = false;
+                        }
+                    });
+                });
+            }
         }
     }
 
