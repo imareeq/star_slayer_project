@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from "phaser";
 import { DialogueEngine } from "./DialogueEngine";
-import { Dialogue } from "./types/Types";
+import { Dialogue, TrainingPrompt } from "./types/Types";
 
 export class DataTrainingGame extends Scene {
     private canvasClickHandler?: (ev: MouseEvent) => void;
@@ -33,6 +33,7 @@ export class DataTrainingGame extends Scene {
     private currentPromptIndex: number;
     private winnerText!: GameObjects.Text;
     private gameOverText!: GameObjects.Text;
+    private trainingDataPromise: Promise<void>;
 
     progressBarIndexMap: Record<number, number> = {
         1: 12,
@@ -121,83 +122,24 @@ export class DataTrainingGame extends Scene {
         },
     ];
 
-    prompts = [
-        {
-            id: 1,
-            prompt_text: "bank",
-            options: [
-                { word: "cash", weight: 10 },
-                { word: "vault", weight: 9 },
-                { word: "security", weight: 8 },
-                { word: "teller", weight: 7 },
-                { word: "loan", weight: 6 },
-                { word: "desk", weight: 4 },
-                { word: "car", weight: 3 },
-                { word: "tree", weight: 2 },
-                { word: "paperclip", weight: 1 },
-            ],
-        },
-        {
-            id: 2,
-            prompt_text: "car",
-            options: [
-                { word: "engine", weight: 10 },
-                { word: "wheel", weight: 9 },
-                { word: "brake", weight: 8 },
-                { word: "fuel", weight: 7 },
-                { word: "door", weight: 6 },
-                { word: "window", weight: 4 },
-                { word: "seat", weight: 3 },
-                { word: "tire", weight: 2 },
-                { word: "road", weight: 1 },
-            ],
-        },
-        {
-            id: 3,
-            prompt_text: "forest",
-            options: [
-                { word: "trees", weight: 10 },
-                { word: "leaves", weight: 9 },
-                { word: "animals", weight: 8 },
-                { word: "river", weight: 7 },
-                { word: "birds", weight: 6 },
-                { word: "mushroom", weight: 4 },
-                { word: "insects", weight: 3 },
-                { word: "rocks", weight: 2 },
-                { word: "cabin", weight: 1 },
-            ],
-        },
-        {
-            id: 4,
-            prompt_text: "kitchen",
-            options: [
-                { word: "stove", weight: 10 },
-                { word: "fridge", weight: 9 },
-                { word: "sink", weight: 8 },
-                { word: "knife", weight: 7 },
-                { word: "pan", weight: 6 },
-                { word: "spoon", weight: 4 },
-                { word: "plate", weight: 3 },
-                { word: "cup", weight: 2 },
-                { word: "table", weight: 1 },
-            ],
-        },
-        {
-            id: 5,
-            prompt_text: "office",
-            options: [
-                { word: "computer", weight: 10 },
-                { word: "desk", weight: 9 },
-                { word: "chair", weight: 8 },
-                { word: "printer", weight: 7 },
-                { word: "paper", weight: 6 },
-                { word: "pen", weight: 4 },
-                { word: "phone", weight: 3 },
-                { word: "calendar", weight: 2 },
-                { word: "lamp", weight: 1 },
-            ],
-        },
-    ];
+    private prompts: TrainingPrompt[];
+
+    private async fetchTrainingPrompts(): Promise<any> {
+        try {
+            const response = await fetch("/api/trainingGameAIReq", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            const result = await response.json();
+
+            return result;
+        } catch (error) {
+            console.error("Error calling training game API:", error);
+        }
+    }
 
     init() {
         this.cameras.main.fadeIn(500);
@@ -232,14 +174,19 @@ export class DataTrainingGame extends Scene {
 
     create() {
         this.events.once("shutdown", this.cleanup, this);
+
+        this.trainingDataPromise = this.fetchTrainingPrompts().then(
+            (result) => {
+                this.prompts = JSON.parse(result.message.replace(/```(?:json)?/g, "").trim()).prompts || [];
+            }
+        );
+
         this.background = this.add.image(0, 0, "training-bg");
         this.terminalContainer = this.add.container(0, 0, []);
         this.currentProgress = 1;
         this.createMinigameTerminal();
         this.createProgressBar(this.currentProgress);
         this.currentPromptIndex = 0;
-        this.createPromptText(this.currentPromptIndex);
-        this.createPromptCounter();
         this.createSubmitBtn();
         this.createSettingsButton();
 
@@ -255,7 +202,6 @@ export class DataTrainingGame extends Scene {
             canvas.focus();
             this.canvasClickHandler = () => {
                 canvas.focus();
-                console.log("Canvas focused via click (CardGame)");
             };
             canvas.addEventListener("click", this.canvasClickHandler);
         }
@@ -269,7 +215,18 @@ export class DataTrainingGame extends Scene {
         );
 
         cutsceneEngine.start();
-        this.events.once("dialogueComplete", this.startGame, this);
+
+        this.events.once("dialogueComplete", async () => {
+            if (!this.prompts) {
+                await this.trainingDataPromise;
+            }
+            this.createPromptText(this.currentPromptIndex);
+            this.createPromptCounter();
+
+            this.layout();
+
+            this.startGame();
+        });
     }
 
     private startGame() {
@@ -288,13 +245,18 @@ export class DataTrainingGame extends Scene {
             .setInteractive({ useHandCursor: true });
 
         this.gameOverText = this.add
-            .text(this.scale.width / 2, -1000, "GAME OVER\nClick to try again", {
-                align: "center",
-                strokeThickness: 4,
-                fontSize: 40,
-                fontStyle: "bold",
-                color: "#ff0000",
-            })
+            .text(
+                this.scale.width / 2,
+                -1000,
+                "GAME OVER\nClick to try again",
+                {
+                    align: "center",
+                    strokeThickness: 4,
+                    fontSize: 40,
+                    fontStyle: "bold",
+                    color: "#ff0000",
+                }
+            )
             .setOrigin(0.5)
             .setDepth(3000)
             .setInteractive({ useHandCursor: true });
@@ -380,7 +342,6 @@ export class DataTrainingGame extends Scene {
         this.submitContainer.setVisible(false);
 
         submitBtnBg.on("pointerdown", () => {
-            console.log("Submit button clicked!");
             this.handleTraining();
         });
     }
@@ -427,10 +388,8 @@ export class DataTrainingGame extends Scene {
 
         if (playerWeight / maxWeight >= 0.75) {
             this.currentProgress = Math.min(10, this.currentProgress + 1);
-            console.log("Incrementing current progress");
         } else {
             this.currentProgress = Math.max(1, this.currentProgress - 1);
-            console.log("Decrementing current progress");
         }
 
         this.progressBar.setFrame(
@@ -597,7 +556,6 @@ export class DataTrainingGame extends Scene {
         const scaleX = Math.floor(w / this.background.width);
         const scaleY = Math.floor(h / this.background.height);
         const scale = Math.min(scaleX, scaleY);
-        console.log("scale of background %d\n", scale);
 
         this.background.setScale(scale);
         this.background.setPosition(w / 2, h / 2);
@@ -653,6 +611,9 @@ export class DataTrainingGame extends Scene {
         if (this.progressBar) {
             this.progressBar.destroy;
         }
+
+        // pauseOverlay
+        // 
 
         this.scale.off("resize", this.layout, this);
         this.input.keyboard?.off("keydown-Q");
