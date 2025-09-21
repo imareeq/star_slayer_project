@@ -37,3 +37,14 @@ export interface CardObject {
     hasFaceAt: (x: number, y: number) => boolean;
     isFaceDown: () => boolean;
 }
+
+export type TrainingPromptOption = {
+    word: string;
+    weight: number;
+}
+
+export type TrainingPrompt = {
+    id: number;
+    prompt_text: string;
+    options: TrainingPromptOption[];
+}

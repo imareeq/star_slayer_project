@@ -1,18 +1,53 @@
 import { GameObjects, Scene } from "phaser";
-import { EventBus } from "../EventBus";
 import { DialogueEngine } from "./DialogueEngine";
 import { Dialogue } from "./types/Types";
 
 export class DataTrainingGame extends Scene {
-    background: GameObjects.Image;
-    private buttons: Phaser.GameObjects.Rectangle[] = [];
-    private focusIndex: number = -1;
-    private focusIndicator!: Phaser.GameObjects.Rectangle;
     private canvasClickHandler?: (ev: MouseEvent) => void;
     private terminalContainer!: Phaser.GameObjects.Container;
     private cutsceneOverlay!: Phaser.GameObjects.Rectangle;
     private cutsceneText!: Phaser.GameObjects.Text;
 
+    // --- UI and Menu Elements ---
+    private buttons: Phaser.GameObjects.Rectangle[] = [];
+    private focusIndex: number = -1;
+    private focusIndicator!: Phaser.GameObjects.Rectangle;
+    private settingsButton!: Phaser.GameObjects.Rectangle;
+    private settingsText!: Phaser.GameObjects.Text;
+    private pauseOverlay!: Phaser.GameObjects.Rectangle;
+    private pauseMenu!: Phaser.GameObjects.Container;
+    private isPaused: boolean = false;
+
+    // --- Game Logic Properties ---
+    private background: GameObjects.Image;
+    private minigameTerminal: GameObjects.Image;
+    private progressBar: GameObjects.Sprite;
+    private currentProgress: number;
+    private promptText!: GameObjects.Text;
+    private optionButtons: GameObjects.Rectangle[] = [];
+    private optionTexts: GameObjects.Text[] = [];
+    private selected: boolean[] = [];
+    private maxSelections: number = 5;
+    private counterText!: GameObjects.Text;
+    private submitContainer: GameObjects.Container;
+    private currentPromptIndex: number;
+    private winnerText!: GameObjects.Text;
+    private gameOverText!: GameObjects.Text;
+
+    progressBarIndexMap: Record<number, number> = {
+        1: 12,
+        2: 6,
+        3: 13,
+        4: 0,
+        5: 7,
+        6: 14,
+        7: 1,
+        8: 8,
+        9: 15,
+        10: 2,
+    };
+
+    // cutscene elements
     private cutsceneLines: Dialogue[] = [
         {
             speaker: "Narrator",
@@ -44,23 +79,128 @@ export class DataTrainingGame extends Scene {
         },
         {
             speaker: "User",
-            line: "Hang in there! I'll do my best!"
+            line: "Hang in there! I'll do my best!",
         },
         {
             speaker: "Narrator",
-            line: "Click to begin..."
-        }
+            line: "You will be given a series of scenes. For each scene, select the 5 words that best match it. You need an accuracy score of atleast 70% to pass. The current accuracy is displayed at the top of the terminal.",
+        },
+        {
+            speaker: "Narrator",
+            line: "Click to begin...",
+        },
     ];
 
-    private settingsButton!: Phaser.GameObjects.Rectangle;
-    private settingsText!: Phaser.GameObjects.Text;
-    private pauseOverlay!: Phaser.GameObjects.Rectangle;
-    private pauseMenu!: Phaser.GameObjects.Container;
-    private isPaused: boolean = false;
+    private gameOverLines: Dialogue[] = [
+        {
+            speaker: "User",
+            line: "Oh no! I messed it up!",
+        },
+        {
+            speaker: "Sidekick",
+            line: "My calibration is fried, I don't know what to do!",
+        },
+        {
+            speaker: "User",
+            line: "Let's make a run for it, follow me!",
+        },
+    ];
+
+    private gameWinLines: Dialogue[] = [
+        {
+            speaker: "User",
+            line: "I think that's it. Did it work?",
+        },
+        {
+            speaker: "Sidekick",
+            line: "I think it did. I can feel this new power in my wires. Let me scan the area and find us an escape route.",
+        },
+        {
+            speaker: "Sidekick",
+            line: "Follow me!",
+        },
+    ];
+
+    prompts = [
+        {
+            id: 1,
+            prompt_text: "bank",
+            options: [
+                { word: "cash", weight: 10 },
+                { word: "vault", weight: 9 },
+                { word: "security", weight: 8 },
+                { word: "teller", weight: 7 },
+                { word: "loan", weight: 6 },
+                { word: "desk", weight: 4 },
+                { word: "car", weight: 3 },
+                { word: "tree", weight: 2 },
+                { word: "paperclip", weight: 1 },
+            ],
+        },
+        {
+            id: 2,
+            prompt_text: "car",
+            options: [
+                { word: "engine", weight: 10 },
+                { word: "wheel", weight: 9 },
+                { word: "brake", weight: 8 },
+                { word: "fuel", weight: 7 },
+                { word: "door", weight: 6 },
+                { word: "window", weight: 4 },
+                { word: "seat", weight: 3 },
+                { word: "tire", weight: 2 },
+                { word: "road", weight: 1 },
+            ],
+        },
+        {
+            id: 3,
+            prompt_text: "forest",
+            options: [
+                { word: "trees", weight: 10 },
+                { word: "leaves", weight: 9 },
+                { word: "animals", weight: 8 },
+                { word: "river", weight: 7 },
+                { word: "birds", weight: 6 },
+                { word: "mushroom", weight: 4 },
+                { word: "insects", weight: 3 },
+                { word: "rocks", weight: 2 },
+                { word: "cabin", weight: 1 },
+            ],
+        },
+        {
+            id: 4,
+            prompt_text: "kitchen",
+            options: [
+                { word: "stove", weight: 10 },
+                { word: "fridge", weight: 9 },
+                { word: "sink", weight: 8 },
+                { word: "knife", weight: 7 },
+                { word: "pan", weight: 6 },
+                { word: "spoon", weight: 4 },
+                { word: "plate", weight: 3 },
+                { word: "cup", weight: 2 },
+                { word: "table", weight: 1 },
+            ],
+        },
+        {
+            id: 5,
+            prompt_text: "office",
+            options: [
+                { word: "computer", weight: 10 },
+                { word: "desk", weight: 9 },
+                { word: "chair", weight: 8 },
+                { word: "printer", weight: 7 },
+                { word: "paper", weight: 6 },
+                { word: "pen", weight: 4 },
+                { word: "phone", weight: 3 },
+                { word: "calendar", weight: 2 },
+                { word: "lamp", weight: 1 },
+            ],
+        },
+    ];
 
     init() {
         this.cameras.main.fadeIn(500);
-        // TODO: needs a timer
     }
 
     constructor() {
@@ -68,19 +208,41 @@ export class DataTrainingGame extends Scene {
     }
 
     preload() {
-        this.load.image("training-bg", "assets/training_game/training_lore_bg.png");
-        this.load.image("training-terminal", "assets/training_game/training_terminal_bg.png");
+        this.load.image(
+            "training-bg",
+            "assets/training_game/training_lore_bg.png"
+        );
+        this.load.image(
+            "training-terminal",
+            "assets/training_game/training_minigame_bg.png"
+        );
         this.load.image("player", "assets/Player.png");
         this.load.image("sidekick", "assets/Sidekick.png");
         this.load.image("dialogue-box-left", "assets/DialogueBoxLeft.png");
         this.load.image("dialogue-box-right", "assets/DialogueBoxRight.png");
+        this.load.spritesheet(
+            "progress-bar",
+            "assets/training_game/progress_bar.png",
+            {
+                frameWidth: 166,
+                frameHeight: 18,
+            }
+        );
     }
 
     create() {
         this.events.once("shutdown", this.cleanup, this);
         this.background = this.add.image(0, 0, "training-bg");
-
+        this.terminalContainer = this.add.container(0, 0, []);
+        this.currentProgress = 1;
+        this.createMinigameTerminal();
+        this.createProgressBar(this.currentProgress);
+        this.currentPromptIndex = 0;
+        this.createPromptText(this.currentPromptIndex);
+        this.createPromptCounter();
+        this.createSubmitBtn();
         this.createSettingsButton();
+
         this.focusIndicator = this.add
             .rectangle(0, 0, 310, 65, 0xffff00, 0)
             .setStrokeStyle(2, 0xffff00)
@@ -98,10 +260,6 @@ export class DataTrainingGame extends Scene {
             canvas.addEventListener("click", this.canvasClickHandler);
         }
 
-        this.input.keyboard?.on("keydown-Q", () => {
-            this.togglePauseMenu();
-        });
-
         this.layout();
         this.scale.on("resize", this.layout, this);
 
@@ -111,8 +269,266 @@ export class DataTrainingGame extends Scene {
         );
 
         cutsceneEngine.start();
+        this.events.once("dialogueComplete", this.startGame, this);
+    }
 
-        EventBus.emit("current-scene-ready", this);
+    private startGame() {
+        this.showTerminal();
+
+        this.winnerText = this.add
+            .text(this.scale.width / 2, -1000, "YOU WIN\nClick to continue", {
+                align: "center",
+                strokeThickness: 4,
+                fontSize: 40,
+                fontStyle: "bold",
+                color: "#8c7ae6",
+            })
+            .setOrigin(0.5)
+            .setDepth(3000)
+            .setInteractive({ useHandCursor: true });
+
+        this.gameOverText = this.add
+            .text(this.scale.width / 2, -1000, "GAME OVER\nClick to try again", {
+                align: "center",
+                strokeThickness: 4,
+                fontSize: 40,
+                fontStyle: "bold",
+                color: "#ff0000",
+            })
+            .setOrigin(0.5)
+            .setDepth(3000)
+            .setInteractive({ useHandCursor: true });
+
+        this.winnerText.on("pointerdown", () =>
+            this.scene.start("LevelSelect")
+        );
+        this.gameOverText.on("pointerdown", () => this.restartGame());
+
+        this.progressBar.setVisible(true);
+        this.promptText.setVisible(true);
+        this.counterText.setVisible(true);
+        this.submitContainer.setVisible(true);
+        this.createOptionButtons(1);
+
+        this.events.once("trainingCompleted", this.endSequence, this);
+    }
+
+    private endSequence() {
+        if (this.currentProgress >= 7) {
+            const cutsceneEngine: DialogueEngine = new DialogueEngine(
+                this,
+                this.gameWinLines
+            );
+
+            cutsceneEngine.start();
+
+            this.events.once("dialogueComplete", this.gameWin, this);
+        } else {
+            const cutsceneEngine: DialogueEngine = new DialogueEngine(
+                this,
+                this.gameOverLines
+            );
+
+            cutsceneEngine.start();
+
+            this.events.once("dialogueComplete", this.gameOver, this);
+        }
+    }
+
+    private gameOver() {
+        this.add.tween({
+            targets: this.gameOverText,
+            y: this.scale.height / 2,
+            ease: "Bounce.Out",
+            duration: 1000,
+        });
+    }
+
+    private gameWin() {
+        this.add.tween({
+            targets: this.winnerText,
+            y: this.scale.height / 2,
+            ease: "Bounce.Out",
+            duration: 1000,
+        });
+    }
+
+    private createSubmitBtn() {
+        const w = this.scale.width;
+        const h = this.scale.height;
+
+        const buttonWidth = 140;
+        const buttonHeight = 40;
+
+        const submitBtnBg = this.add
+            .rectangle(0, 0, buttonWidth, buttonHeight, 0x2f2d42)
+            .setInteractive({ useHandCursor: true });
+
+        const submitTxt = this.add
+            .text(0, 0, "Train", {
+                fontFamily: "Arial",
+                fontSize: "16px",
+                color: "#ffffff",
+            })
+            .setOrigin(0.5);
+
+        this.submitContainer = this.add.container(w / 2, h * 0.75, [
+            submitBtnBg,
+            submitTxt,
+        ]);
+
+        this.submitContainer.setVisible(false);
+
+        submitBtnBg.on("pointerdown", () => {
+            console.log("Submit button clicked!");
+            this.handleTraining();
+        });
+    }
+
+    private nextPrompt() {
+        this.optionButtons.forEach((btn) => btn.destroy());
+        this.optionTexts.forEach((txt) => txt.destroy());
+        this.optionButtons = [];
+        this.optionTexts = [];
+
+        if (this.currentPromptIndex >= this.prompts.length) {
+            this.events.emit("trainingCompleted");
+            this.submitContainer.destroy();
+            this.destroyTerminal();
+            this.progressBar.destroy();
+            this.counterText.destroy();
+            this.promptText.destroy();
+            return;
+        }
+
+        const prompt = this.prompts[this.currentPromptIndex];
+        this.promptText.setText(prompt.prompt_text);
+        this.selected = new Array(prompt.options.length).fill(false);
+
+        this.createOptionButtons(this.currentPromptIndex);
+
+        this.counterText.setText(`Selected: 0/${this.maxSelections}`);
+    }
+
+    private handleTraining() {
+        const playerWeight = this.selected
+            .map((isSelected, index) =>
+                isSelected
+                    ? this.prompts[this.currentPromptIndex].options[index]
+                          .weight
+                    : 0
+            )
+            .reduce((sum, w) => sum + w, 0);
+
+        const maxWeight = this.prompts[this.currentPromptIndex].options
+            .sort((a, b) => b.weight - a.weight)
+            .slice(0, this.maxSelections)
+            .reduce((sum, o) => sum + o.weight, 0);
+
+        if (playerWeight / maxWeight >= 0.75) {
+            this.currentProgress = Math.min(10, this.currentProgress + 1);
+            console.log("Incrementing current progress");
+        } else {
+            this.currentProgress = Math.max(1, this.currentProgress - 1);
+            console.log("Decrementing current progress");
+        }
+
+        this.progressBar.setFrame(
+            this.progressBarIndexMap[this.currentProgress]
+        );
+
+        ++this.currentPromptIndex;
+
+        this.nextPrompt();
+    }
+
+    private createMinigameTerminal() {
+        this.minigameTerminal = this.add
+            .image(
+                this.scale.width / 2,
+                this.scale.height / 2,
+                "training-terminal"
+            )
+            .setOrigin(0.5)
+            .setDepth(10)
+            .setVisible(false);
+    }
+
+    private createProgressBar(progress: number) {
+        this.progressBar = this.add
+            .sprite(100, 50, "progress-bar", this.progressBarIndexMap[progress])
+            .setDepth(100)
+            .setVisible(false);
+    }
+
+    private createPromptText(promptId: number) {
+        this.promptText = this.add
+            .text(0, 0, this.prompts[this.currentPromptIndex].prompt_text, {
+                fontFamily: "Arial",
+                fontSize: "24px",
+                color: "#ffffff",
+            })
+            .setDepth(110)
+            .setOrigin(0.5)
+            .setVisible(false);
+    }
+
+    private createOptionButtons(promptId: number) {
+        const w = this.scale.width;
+        const h = this.scale.height;
+
+        this.selected = new Array(
+            this.prompts[this.currentPromptIndex].options.length
+        ).fill(false);
+
+        const buttonWidth = 140;
+        const buttonHeight = 40;
+        const spacing = 10;
+        const cols = 5;
+        const rows = Math.ceil(
+            this.prompts[this.currentPromptIndex].options.length / cols
+        );
+
+        const gridWidth = cols * buttonWidth + (cols - 1) * spacing;
+        const gridHeight = rows * buttonHeight + (rows - 1) * spacing;
+
+        const startX = w / 2 - gridWidth / 2 + buttonWidth / 2;
+        const startY = h / 2 - gridHeight / 2 + buttonHeight / 2;
+
+        this.prompts[this.currentPromptIndex].options.forEach((opt, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+            const x = startX + col * (buttonWidth + spacing);
+            const y = startY + row * (buttonHeight + spacing);
+
+            const btn = this.add
+                .rectangle(x, y, buttonWidth, buttonHeight, 0x2f2d42)
+                .setInteractive({ useHandCursor: true });
+            this.optionButtons.push(btn);
+
+            const txt = this.add
+                .text(x, y, opt.word, {
+                    fontFamily: "Arial",
+                    fontSize: "16px",
+                    color: "#ffffff",
+                })
+                .setOrigin(0.5);
+            this.optionTexts.push(txt);
+
+            btn.on("pointerdown", () => this.toggleSelection(index));
+        });
+    }
+
+    private createPromptCounter() {
+        this.counterText = this.add
+            .text(0, 0, `Selected: 0/${this.maxSelections}`, {
+                fontFamily: "Arial",
+                fontSize: "18px",
+                color: "#ffff00",
+            })
+            .setDepth(110)
+            .setOrigin(0.5)
+            .setVisible(false);
     }
 
     private showTerminal() {
@@ -120,16 +536,126 @@ export class DataTrainingGame extends Scene {
             .rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.6)
             .setOrigin(0);
 
-        const terminal = this.add
-            .image(this.scale.width / 2, this.scale.height / 2, "terminal-bg")
-            .setOrigin(0.5);
+        this.minigameTerminal.setVisible(true);
 
-        // Wrap everything in a container
-        this.terminalContainer = this.add.container(0, 0, [overlay, terminal]);
+        this.terminalContainer.add([overlay, this.minigameTerminal]);
     }
 
-    private hideTerminal() {
-        this.terminalContainer.destroy(true);
+    private destroyTerminal() {
+        if (this.terminalContainer) {
+            this.terminalContainer.iterate(
+                (child: Phaser.GameObjects.GameObject) => {
+                    child.destroy();
+                }
+            );
+            this.terminalContainer.destroy();
+
+            this.terminalContainer = null!;
+        }
+
+        if (this.minigameTerminal) {
+            this.minigameTerminal.destroy();
+            this.minigameTerminal = null!;
+        }
+    }
+
+    private toggleSelection(index: number) {
+        const currentSelected = this.selected.filter((s) => s).length;
+        if (!this.selected[index] && currentSelected >= this.maxSelections) {
+            return;
+        }
+
+        this.selected[index] = !this.selected[index];
+
+        this.optionButtons[index].setFillStyle(
+            this.selected[index] ? 0x46235e : 0x2f2d42
+        );
+
+        const selectedCount = this.selected.filter((s) => s).length;
+        this.counterText.setText(
+            `Selected: ${selectedCount}/${this.maxSelections}`
+        );
+    }
+
+    private restartGame() {
+        this.selected = [];
+        this.optionButtons = [];
+        this.optionTexts = [];
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once(
+            Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
+            () => {
+                this.scene.restart();
+            }
+        );
+    }
+
+    private layout = () => {
+        const w = this.scale.width;
+        const h = this.scale.height;
+
+        const scaleX = Math.floor(w / this.background.width);
+        const scaleY = Math.floor(h / this.background.height);
+        const scale = Math.min(scaleX, scaleY);
+        console.log("scale of background %d\n", scale);
+
+        this.background.setScale(scale);
+        this.background.setPosition(w / 2, h / 2);
+
+        // Position settings button in top right
+        this.settingsButton.setPosition(w - 50, 30);
+        this.settingsText.setPosition(w - 50, 30);
+
+        if (this.minigameTerminal) {
+            this.minigameTerminal.setScale(scale * 0.75);
+            this.minigameTerminal.setPosition(w / 2, h / 2);
+        }
+
+        if (this.progressBar) {
+            this.progressBar.setScale(scale * 0.5);
+            this.progressBar.setPosition(w / 2, h / 5);
+        }
+
+        if (this.promptText) {
+            this.promptText.setPosition(w / 2, h * 0.3);
+        }
+
+        if (this.counterText) {
+            this.counterText.setPosition(w * 0.7, h * 0.8);
+        }
+
+        if (this.submitContainer) {
+            this.submitContainer.setPosition(w / 2, h * 0.75);
+        }
+
+        if (this.cutsceneOverlay && this.cutsceneOverlay.active) {
+            this.cutsceneOverlay.setSize(w, h);
+            this.cutsceneText.setPosition(w / 2, h / 2);
+            this.cutsceneText.setStyle({ wordWrap: { width: w * 0.8 } });
+        }
+
+        if (this.pauseOverlay && this.pauseOverlay.active) {
+            this.pauseOverlay.setSize(w, h);
+            this.pauseMenu.setPosition(w / 2, h / 2);
+        }
+    };
+
+    private cleanup() {
+        const canvas = this.game.canvas as HTMLCanvasElement;
+        if (canvas && this.canvasClickHandler) {
+            canvas.removeEventListener("click", this.canvasClickHandler);
+            this.canvasClickHandler = undefined;
+        }
+        if (this.minigameTerminal) {
+            this.minigameTerminal.destroy();
+        }
+
+        if (this.progressBar) {
+            this.progressBar.destroy;
+        }
+
+        this.scale.off("resize", this.layout, this);
+        this.input.keyboard?.off("keydown-Q");
     }
 
     private createSettingsButton() {
@@ -246,57 +772,6 @@ export class DataTrainingGame extends Scene {
     private restartScene() {
         this.isPaused = false;
         this.scene.restart();
-    }
-
-    private layout = () => {
-        const w = this.scale.width;
-        const h = this.scale.height;
-
-        const scaleX = Math.floor(w / this.background.width);
-        const scaleY = Math.floor(h / this.background.height);
-        const scale = Math.min(scaleX, scaleY);
-        console.log("scale of background %d\n", scale);
-
-        this.background.setScale(scale);
-        this.background.setPosition(w / 2, h / 2);
-
-        // Position settings button in top right
-        this.settingsButton.setPosition(w - 50, 30);
-        this.settingsText.setPosition(w - 50, 30);
-
-        // Update cutscene elements if they exist
-        if (this.cutsceneOverlay && this.cutsceneOverlay.active) {
-            this.cutsceneOverlay.setSize(w, h);
-            this.cutsceneText.setPosition(w / 2, h / 2);
-            this.cutsceneText.setStyle({ wordWrap: { width: w * 0.8 } });
-        }
-
-        // Update pause menu if it exists
-        if (this.pauseOverlay && this.pauseOverlay.active) {
-            this.pauseOverlay.setSize(w, h);
-            this.pauseMenu.setPosition(w / 2, h / 2);
-        }
-    };
-
-    private focusNextButton() {
-        this.focusIndex = (this.focusIndex + 1) % this.buttons.length;
-        const button = this.buttons[this.focusIndex];
-        const b = button.getBounds();
-        this.focusIndicator
-            .setSize(b.width, b.height)
-            .setPosition(b.centerX, b.centerY)
-            .setVisible(true);
-    }
-
-    private cleanup() {
-        const canvas = this.game.canvas as HTMLCanvasElement;
-        if (canvas && this.canvasClickHandler) {
-            canvas.removeEventListener("click", this.canvasClickHandler);
-            this.canvasClickHandler = undefined;
-        }
-        this.isPaused = false;
-        this.scale.off("resize", this.layout, this);
-        this.input.keyboard?.off("keydown-Q");
     }
 }
 
