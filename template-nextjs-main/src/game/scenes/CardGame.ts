@@ -447,6 +447,11 @@ private cutsceneLinesGameOver: Dialogue[] = [
                         if (currentGridPos !== undefined) {
                             this.gridToCard.delete(currentGridPos);
                         }
+
+                        // Remove highlighted card if it exists
+                        if (this.highlightedCard?.cardName === card.cardName) {
+                            this.clearHighlight();
+                        }
                         
                         this.cardOpened.destroy();
                         card.destroy();
@@ -480,6 +485,9 @@ private cutsceneLinesGameOver: Dialogue[] = [
                         this.cameras.main.shake(300, 0.01);
 
                         this.time.delayedCall(500, () => {
+                            if (this.highlightedCard?.cardName === card.cardName) {
+                                this.clearHighlight();
+                            }
                             card.flip(false);
                             this.cardOpened?.flip(false,() => {
                                 this.cardOpened = undefined;
@@ -713,7 +721,6 @@ private cutsceneLinesGameOver: Dialogue[] = [
 
         try {
             const requestBody = {
-                model: 'sonar',
                 messages: [
                     {
                         role: 'system',
@@ -733,7 +740,6 @@ private cutsceneLinesGameOver: Dialogue[] = [
                         content: `Input Data: Board: ${boardState} Current Card: ${currentCard} Hallucination Number: ${hallucinationNumber} REMINDER: Output ONLY one index in the format [number].`
                     }
                 ],
-                max_tokens: 500 // Reduced for faster response
             };
 
             console.log('Sending request to API:', requestBody);
@@ -833,7 +839,9 @@ private cutsceneLinesGameOver: Dialogue[] = [
 
                 // Auto-clear highlight after 3 seconds
                 this.time.delayedCall(3000, () => {
-                    this.clearHighlight();
+                    if (this.highlightIndicator) {
+                        this.clearHighlight();
+                    }
                 });
             }
         }
