@@ -20,6 +20,7 @@ export class CardGame extends Scene {
     private isPaused: boolean = false;
     private peekButton!: GameObjects.Text;
     private isPeekMode: boolean = false;
+    private isPeekLoading: boolean = false;
 
     // --- Cutscene Elements ---
     private canvasClickHandler?: (ev: MouseEvent) => void;
@@ -65,36 +66,40 @@ export class CardGame extends Scene {
         },
     ];
 
-    private cutsceneLinesGameOver: Dialogue[] = [
-        {
-            speaker: "EnemySleep_Level_1",
-            line: "zzzZZZzz...",
-        },
-        {
-            speaker: "Narrator",
-            line: "You run out of tries, vault intruder alert was triggered",
-        },
-        {
-            speaker: "EnemyAwake_Level_1",
-            line: "Huh, What's going on?!?!?",
-        },
-        {
-            speaker: "User",
-            line: "Oh no, lets get out of here",
-        },
-        {
-            speaker: "Sidekick",
-            line: "Aye Aye Captain",
-        },
-        {
-            speaker: "EnemyAwake_Level_1",
-            line: "STOP RUNNING, YOU CAN'T GET AWAY FROM ME THAT EASILY!!",
-        },
-        {
-            speaker: "User",
-            line: "AAAAAAAAAAA",
-        },
-    ];
+private cutsceneLinesGameOver: Dialogue[] = [
+    {
+        speaker: "EnemySleep_Level_1",
+        line: "ZzZ... *twitch* ...ZzZ...",
+    },
+    {
+        speaker: "Narrator",
+        line: "Your final attempt to hack the vault fails. A piercing siren blares, and red lights flood the bank!",
+    },
+    {
+        speaker: "EnemyAwake_Level_1",
+        line: "WHO DARES DISTURB MY SLUMBER?! Intruders in the vault!",
+    },
+    {
+        speaker: "Sidekick",
+        line: "Oh no, my sensors are going haywire! That robot's awake, and it's NOT happy!",
+    },
+    {
+        speaker: "Narrator",
+        line: "The ground shakes as the massive robot lurches toward you, its eyes glowing with menace.",
+    },
+    {
+        speaker: "EnemyAwake_Level_1",
+        line: "You thought you could steal from MY vault? You'll pay for this!",
+    },
+    {
+        speaker: "Sidekick",
+        line: "Captain, we're out of time! Run, or we're scrap metal!",
+    },
+    {
+        speaker: "Narrator",
+        line: "You and Sidekick sprint for the exit, but the robot's thundering steps are right behind you...",
+    },
+];
 
     // --- Game Logic Properties ---
     private cardOpened?: CardObject;
@@ -105,6 +110,8 @@ export class CardGame extends Scene {
     private canMove: boolean = false;
     private lives: number = 3;
     private cardNames: string[] = ["card-0", "card-1", "card-2", "card-3", "card-4", "card-5", "card-6", "card-7"];
+    private defualtNumTry = 2
+    private numTryBeforeDamage = this.defualtNumTry;
 
     private gridConfiguration: GridConfiguration = {
         x: 0,
@@ -393,7 +400,7 @@ export class CardGame extends Scene {
             if (card === this.cardOpened || !card.isFaceDown()) return;
 
             this.canMove = false;
-            card.flip(() => {
+            card.flip(false, () => {
                 if (this.cardOpened) {
                     if (this.cardOpened.cardName === card.cardName) {
                         this.cardOpened.destroy();
@@ -403,28 +410,33 @@ export class CardGame extends Scene {
                         this.canMove = true;
                         this.checkWinCondition();
                     } else {
-                        this.lives--;
-                        const heartToRemove = this.heartImages.pop();
-
-                        if (heartToRemove) {
-                            this.add.tween({
-                                targets: heartToRemove,
-                                y: heartToRemove.y - 100,
-                                alpha: 0,
-                                duration: 300,
-                                onComplete: () => {
-                                    if (heartToRemove && heartToRemove.active) {
-                                        heartToRemove.destroy();
-                                    }
-                                },
-                            });
+                        if (this.numTryBeforeDamage <= 1) {
+                            this.numTryBeforeDamage = this.defualtNumTry;
+                            this.lives--;
+                            const heartToRemove = this.heartImages.pop();
+    
+                            if (heartToRemove) {
+                                this.add.tween({
+                                    targets: heartToRemove,
+                                    y: heartToRemove.y - 100,
+                                    alpha: 0,
+                                    duration: 300,
+                                    onComplete: () => {
+                                        if (heartToRemove && heartToRemove.active) {
+                                            heartToRemove.destroy();
+                                        }
+                                    },
+                                });
+                            }
+                        } else {
+                            this.numTryBeforeDamage -= 1;
                         }
 
                         this.cameras.main.shake(300, 0.01);
 
                         this.time.delayedCall(500, () => {
-                            card.flip();
-                            this.cardOpened?.flip(() => {
+                            card.flip(false);
+                            this.cardOpened?.flip(false,() => {
                                 this.cardOpened = undefined;
                                 this.canMove = true;
                                 this.checkLossCondition();
@@ -534,35 +546,62 @@ export class CardGame extends Scene {
     }
 
     private togglePeekMode() {
-        if (!this.canMove || this.isPaused) return;
+        if (!this.canMove || this.isPaused || this.isPeekLoading) return;
 
         this.isPeekMode = !this.isPeekMode;
-
+        
+        console.log(this.isPeekLoading)
         if (this.isPeekMode) {
+            this.isPeekLoading = true;
             console.log('Peek mode ACTIVATED.');
             this.peekButton.setText('Exit Peek ✖️')
                 .setColor('#FFC0CB')
                 .setBackgroundColor('#8B0000');
             
             // Open all cards that are currently face down
-            this.cards.forEach(card => {
-                if (card.isFaceDown()) {
-                    card.flip();
-                }
-            });
+            const cardsToFlip = this.cards.filter(card => card.isFaceDown());
+            
+            if (cardsToFlip.length === 0) {
+                // No cards to flip, immediately reset loading state
+                this.isPeekLoading = false;
+            } else {
+                // Flip cards and reset loading state when all are done
+                let completedFlips = 0;
+                cardsToFlip.forEach(card => {
+                    card.flip(true, () => {
+                        completedFlips++;
+                        if (completedFlips === cardsToFlip.length) {
+                            this.isPeekLoading = false;
+                        }
+                    });
+                });
+            }
 
         } else {
+            this.isPeekLoading = true;
             console.log('Peek mode DEACTIVATED.');
             this.peekButton.setText('Peek 🔍')
                 .setColor('#ffffff')
                 .setBackgroundColor('#333333');
 
             // Close all cards that are currently face up
-            this.cards.forEach(card => {
-                if (!card.isFaceDown()) {
-                    card.flip();
-                }
-            });
+            const cardsToFlip = this.cards.filter(card => !card.isFaceDown() && card !== this.cardOpened);
+            
+            if (cardsToFlip.length === 0) {
+                // No cards to flip, immediately reset loading state
+                this.isPeekLoading = false;
+            } else {
+                // Flip cards and reset loading state when all are done
+                let completedFlips = 0;
+                cardsToFlip.forEach(card => {
+                    card.flip(true, () => {
+                        completedFlips++;
+                        if (completedFlips === cardsToFlip.length) {
+                            this.isPeekLoading = false;
+                        }
+                    });
+                });
+            }
         }
     }
 

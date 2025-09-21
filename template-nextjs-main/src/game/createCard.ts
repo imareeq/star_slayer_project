@@ -41,7 +41,7 @@ export const createCard = ({
     const requiredScale = cardWidth / animationFrameWidth;
     openAnimation.setScale(requiredScale);
 
-    const flip = (callbackComplete?: () => void): void => {
+    const flip = (isHallucinate:boolean,callbackComplete?: () => void): void => {
         if (isFlipping) {
             return;
         }
@@ -69,7 +69,7 @@ export const createCard = ({
                             openAnimation.setVisible(true);
 
                             const willHallucinate = Math.random() < hallucinationChance;
-                            if (willHallucinate && allAnimationKeys.length > 1) {
+                            if (willHallucinate && allAnimationKeys.length > 1 && isHallucinate) {
                                 let hallucinationKey = animationKey;
                                 do {
                                     hallucinationKey = Phaser.Utils.Array.GetRandom(allAnimationKeys);
