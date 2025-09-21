@@ -177,7 +177,10 @@ export class DataTrainingGame extends Scene {
 
         this.trainingDataPromise = this.fetchTrainingPrompts().then(
             (result) => {
-                this.prompts = JSON.parse(result.message.replace(/```(?:json)?/g, "").trim()).prompts || [];
+                this.prompts =
+                    JSON.parse(
+                        result.message.replace(/```(?:json)?/g, "").trim()
+                    ).prompts || [];
             }
         );
 
@@ -186,6 +189,7 @@ export class DataTrainingGame extends Scene {
         this.currentProgress = 1;
         this.createMinigameTerminal();
         this.createProgressBar(this.currentProgress);
+        this.createPromptCounter();
         this.currentPromptIndex = 0;
         this.createSubmitBtn();
         this.createSettingsButton();
@@ -221,8 +225,6 @@ export class DataTrainingGame extends Scene {
                 await this.trainingDataPromise;
             }
             this.createPromptText(this.currentPromptIndex);
-            this.createPromptCounter();
-
             this.layout();
 
             this.startGame();
@@ -421,6 +423,10 @@ export class DataTrainingGame extends Scene {
     }
 
     private createPromptText(promptId: number) {
+        if (this.promptText) {
+            this.promptText.destroy();
+        }
+        
         this.promptText = this.add
             .text(0, 0, this.prompts[this.currentPromptIndex].prompt_text, {
                 fontFamily: "Arial",
@@ -567,23 +573,52 @@ export class DataTrainingGame extends Scene {
         if (this.minigameTerminal) {
             this.minigameTerminal.setScale(scale * 0.75);
             this.minigameTerminal.setPosition(w / 2, h / 2);
-        }
 
-        if (this.progressBar) {
-            this.progressBar.setScale(scale * 0.5);
-            this.progressBar.setPosition(w / 2, h / 5);
-        }
+            const terminalScale =
+                Math.min(
+                    w / this.minigameTerminal.width,
+                    h / this.minigameTerminal.height
+                ) * 0.75;
+            this.minigameTerminal.setScale(terminalScale);
+            this.minigameTerminal.setPosition(w / 2, h / 2);
 
-        if (this.promptText) {
-            this.promptText.setPosition(w / 2, h * 0.3);
-        }
+            const terminalWidth = this.minigameTerminal.displayWidth;
+            const terminalHeight = this.minigameTerminal.displayHeight;
 
-        if (this.counterText) {
-            this.counterText.setPosition(w * 0.7, h * 0.8);
-        }
+            const terminalX = this.minigameTerminal.x - terminalWidth / 2;
+            const terminalY = this.minigameTerminal.y - terminalHeight / 2;
 
-        if (this.submitContainer) {
-            this.submitContainer.setPosition(w / 2, h * 0.75);
+            if (this.progressBar) {
+                this.progressBar.setScale(terminalScale);
+                this.progressBar.setPosition(
+                    terminalX + terminalWidth * 0.5,
+                    terminalY + terminalHeight * 0.1
+                );
+            }
+
+            if (this.counterText) {
+                this.counterText.setPosition(
+                    terminalX + terminalWidth * 0.85,
+                    terminalY + terminalHeight * 0.9
+                );
+            }
+
+            if (this.promptText) {
+                this.promptText.setPosition(
+                    this.minigameTerminal.x,
+                    terminalY + terminalHeight * 0.3
+                );
+                this.promptText.setStyle({
+                    wordWrap: { width: terminalWidth * 0.8 },
+                });
+            }
+
+            if (this.submitContainer) {
+                this.submitContainer.setPosition(
+                    this.minigameTerminal.x,
+                    terminalY + terminalHeight * 0.75
+                );
+            }
         }
 
         if (this.cutsceneOverlay && this.cutsceneOverlay.active) {
@@ -604,16 +639,75 @@ export class DataTrainingGame extends Scene {
             canvas.removeEventListener("click", this.canvasClickHandler);
             this.canvasClickHandler = undefined;
         }
+
+        if (this.terminalContainer) {
+            this.terminalContainer.destroy();
+        }
+
+        if (this.cutsceneOverlay) {
+            this.cutsceneOverlay.destroy();
+        }
+
+        if (this.cutsceneText) {
+            this.cutsceneText.destroy();
+        }
+
+        if (this.settingsButton) {
+            this.settingsButton.destroy();
+        }
+
+        if (this.focusIndicator) {
+            this.focusIndicator.destroy();
+        }
+
+        if (this.settingsText) {
+            this.settingsText.destroy();
+        }
+
+        if (this.pauseOverlay) {
+            this.pauseOverlay.destroy();
+        }
+
+        if (this.pauseMenu) {
+            this.pauseOverlay.destroy();
+        }
+
         if (this.minigameTerminal) {
             this.minigameTerminal.destroy();
         }
 
         if (this.progressBar) {
-            this.progressBar.destroy;
+            this.progressBar.destroy();
         }
 
-        // pauseOverlay
-        // 
+        if (this.background) {
+            this.background.destroy();
+        }
+
+        if (this.promptText) {
+            this.promptText.destroy();
+        }
+
+        if (this.counterText) {
+            this.counterText.destroy();
+        }
+
+        if (this.submitContainer) {
+            this.submitContainer.destroy();
+        }
+
+        if (this.winnerText) {
+            this.winnerText.destroy();
+        }
+
+        if (this.gameOverText) {
+            this.gameOverText.destroy();
+        }
+
+        this.currentProgress = 0;
+        this.optionButtons = [];
+        this.optionTexts = [];
+        this.selected = [];
 
         this.scale.off("resize", this.layout, this);
         this.input.keyboard?.off("keydown-Q");
