@@ -113,6 +113,15 @@ private cutsceneLinesGameOver: Dialogue[] = [
     private defualtNumTry = 2
     private numTryBeforeDamage = this.defualtNumTry;
 
+    // --- Help System Properties ---
+    private helpButton!: GameObjects.Text;
+    private cardPositionSeen: Boolean[] = Array(16).fill(false);  // Track  each card type has been seen
+    private highlightedCard?: CardObject;
+    private highlightIndicator?: GameObjects.Rectangle;
+    private originalCardPositions: Map<number, string> = new Map(); // Track original card positions
+    private cardToGridPosition: Map<CardObject, number> = new Map(); // Map each card to its grid position
+    private gridToCard: Map<number, CardObject> = new Map(); // Map grid position to current card object
+
     private gridConfiguration: GridConfiguration = {
         x: 0,
         y: 0,
@@ -161,6 +170,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
         this.addMinigameBackground();
         this.createSettingsButton();
         this.createPeekButton();
+        this.createHelpButton();
         this.focusIndicator = this.add.rectangle(0, 0, 310, 65, 0xffff00, 0)
             .setStrokeStyle(2, 0xffff00)
             .setVisible(false)
@@ -220,6 +230,12 @@ private cutsceneLinesGameOver: Dialogue[] = [
             const peekX = PADDING + (this.peekButton.width / 2);
             const peekY = PADDING + (this.peekButton.height / 2);
             this.peekButton.setPosition(peekX, peekY);
+        }
+
+        if (this.helpButton) {
+            const helpX = PADDING + (this.helpButton.width / 2);
+            const helpY = PADDING + (this.helpButton.height / 2) + 50; // Position below peek button
+            this.helpButton.setPosition(helpX, helpY);
         }
 
         if (this.cutsceneOverlay && this.cutsceneOverlay.active) {
@@ -300,7 +316,13 @@ private cutsceneLinesGameOver: Dialogue[] = [
         const gridCardNames = Phaser.Utils.Array.Shuffle([...this.cardNames, ...this.cardNames]);
         const allAnimationKeys = this.cardNames.map(name => `${name}-anim`);
 
-        this.cards = gridCardNames.map((name) => {
+        // Store original card name positions
+        this.originalCardPositions.clear();
+        gridCardNames.forEach((name, index) => {
+            this.originalCardPositions.set(index, name);
+        });
+
+        this.cards = gridCardNames.map((name, index) => {
             const animationKey = `${name}-anim`;
 
             if (!this.anims.get(animationKey)) {
@@ -325,6 +347,11 @@ private cutsceneLinesGameOver: Dialogue[] = [
                 hallucinationChance: 0.15,
             });
             newCard.gameObject.setDepth(10);
+            
+            // Map this card to index and vice versa
+            this.cardToGridPosition.set(newCard, index);
+            this.gridToCard.set(index, newCard);
+            
             return newCard;
         });
     }
@@ -366,6 +393,7 @@ private cutsceneLinesGameOver: Dialogue[] = [
         this.createGridCards();
         this.positionGameElements();
         this.peekButton.setVisible(true);
+        this.helpButton.setVisible(true);
 
         this.time.delayedCall(500, () => {
             this.canMove = true;
@@ -391,6 +419,9 @@ private cutsceneLinesGameOver: Dialogue[] = [
         if (this.settingsButton && this.settingsButton.getBounds().contains(pointer.x, pointer.y)) {
             return;
         }
+        if (this.helpButton && this.helpButton.getBounds().contains(pointer.x, pointer.y)) {
+            return;
+        }
 
         if (!this.canMove || this.isPaused || this.isPeekMode) return;
 
@@ -401,8 +432,22 @@ private cutsceneLinesGameOver: Dialogue[] = [
 
             this.canMove = false;
             card.flip(false, () => {
+                // Track card location when manually clicked
+                this.trackCardLocation(card);
+
                 if (this.cardOpened) {
                     if (this.cardOpened.cardName === card.cardName) {
+                        // Remove cards from grid mapping before destroying
+                        const openedGridPos = this.cardToGridPosition.get(this.cardOpened);
+                        const currentGridPos = this.cardToGridPosition.get(card);
+                        
+                        if (openedGridPos !== undefined) {
+                            this.gridToCard.delete(openedGridPos);
+                        }
+                        if (currentGridPos !== undefined) {
+                            this.gridToCard.delete(currentGridPos);
+                        }
+                        
                         this.cardOpened.destroy();
                         card.destroy();
                         this.cards = this.cards.filter(c => c.cardName !== card.cardName);
@@ -505,12 +550,18 @@ private cutsceneLinesGameOver: Dialogue[] = [
         this.heartImages.forEach(heart => heart.destroy());
         if (this.winnerText) this.winnerText.destroy();
         if (this.gameOverText) this.gameOverText.destroy();
+        if (this.helpButton) this.helpButton.destroy();
+        this.clearHighlight();
 
         this.cards = [];
         this.heartImages = [];
         this.cardOpened = undefined;
         this.isPaused = false;
         this.isPeekMode = false;
+        this.cardPositionSeen = Array(16).fill(false);  
+        this.originalCardPositions.clear();
+        this.cardToGridPosition.clear();
+        this.gridToCard.clear();
     }
 
     private createSettingsButton() {
@@ -542,6 +593,24 @@ private cutsceneLinesGameOver: Dialogue[] = [
             .setDepth(10001)
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.togglePeekMode())
+            .setVisible(false);
+    }
+
+    private createHelpButton() {
+        this.helpButton = this.add.text(0, 0, 'Help 💡', {
+            fontFamily: "Arial Black",
+            fontSize: "18px",
+            color: "#ffffff",
+            backgroundColor: '0x32cd32',
+            padding: { x: 10, y: 5 },
+        })
+            .setOrigin(0.5)
+            .setDepth(10001)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+                console.log('Help button clicked!');
+                this.requestHelp();
+            })
             .setVisible(false);
     }
 
@@ -602,6 +671,200 @@ private cutsceneLinesGameOver: Dialogue[] = [
                     });
                 });
             }
+        }
+    }
+
+    private trackCardLocation(card: CardObject) {
+        // Get the grid position for this card
+        const gridPosition = this.cardToGridPosition.get(card);
+        if (gridPosition === undefined) return;
+
+        this.cardPositionSeen[gridPosition] = true;
+    }
+
+    
+    private async requestHelp() {
+        // Only request help if the game is not paused and a card is opened
+        if (!this.canMove || this.isPaused || !this.cardOpened) {
+            console.log('Help button clicked but conditions not met:', {
+                isPaused: this.isPaused,
+                cardOpened: !!this.cardOpened
+            });
+            return;
+        }
+
+        console.log('Help button clicked - requesting AI assistance');
+        
+        const currentCard = this.cardOpened.cardName;
+        const boardState = this.generateBoardState();
+        const hallucinationNumber = Math.floor(Math.random() * 100)+1;
+
+        console.log('Input data:', {
+            currentCard,
+            boardState,
+            hallucinationNumber
+        });
+
+        // Button is busy
+        this.helpButton.setText('Loading...')
+            .setColor('#FFA500')
+            .setBackgroundColor('#8B4513')
+            .disableInteractive();
+
+        try {
+            const requestBody = {
+                model: 'sonar',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a memory assistant for a card-matching game. Your task is to find the location of a matching card.
+                                    Rules:
+                                    1. Return a single coordinate index (0-15) where the current_card is located.
+                                    2. Ignore any slots labeled "matched (ignore)". These cannot be selected.
+                                    3. If hallucination_number > 70 and the current card has been seen, intentionally give an incorrect location. The coordinate must be in the valid range 0-15 and not a matched card.
+                                    4. Do NOT hallucinate if the current card has NOT been seen yet. In that case, choose any random valid index in the range 0-15 that is not matched.
+                                    5. If hallucination_number ≤ 70, return the correct location if you know it. If unknown, choose any random valid index in the range 0-15 that is not matched.
+                                    6. Output format must be: [chosen_index] ONLY. Do not include text, explanations, or multiple indices.
+
+                                    Example: [7]`
+                    },
+                    {
+                        role: 'user',
+                        content: `Input Data: Board: ${boardState} Current Card: ${currentCard} Hallucination Number: ${hallucinationNumber} REMINDER: Output ONLY one index in the format [number].`
+                    }
+                ],
+                max_tokens: 500 // Reduced for faster response
+            };
+
+            console.log('Sending request to API:', requestBody);
+
+            const response = await fetch('/api/requestAI', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            
+            const data = await response.json();
+            console.log('API response status:', response.status);
+            console.log('API response data:', data);
+
+            if (data.success && data.aiDecision && data.aiDecision !== 'No response generated') {
+                console.log('AI Decision received:', data.aiDecision);
+                // Get index using regex
+                const match = data.aiDecision.match(/\[(\d+)\]/);
+                if (match) {
+                    // Convert to number
+                    const suggestedIndex = parseInt(match[1]);
+                    console.log('Suggested card index:', suggestedIndex);
+                    this.highlightSuggestedCard(suggestedIndex);
+                } else {
+                    console.log('No valid index found in AI response:', data.aiDecision);
+                    // Fallback: suggest a random valid card
+                    this.suggestRandomCard();
+                }
+            } else {
+                console.log('AI request failed or no decision generated:', data);
+                // Fallback: suggest a random valid card
+                this.suggestRandomCard();
+            }
+        } catch (error) {
+            console.error('Error requesting help:', error);
+        } finally {
+            // Reset help button
+            this.helpButton.setText('Help 💡')
+                .setColor('#ffffff')
+                .setBackgroundColor('0x32cd32')
+                .setInteractive({ useHandCursor: true });
+        }
+    }
+
+    private generateBoardState(): string {
+        const boardLines: string[] = [];
+        
+        for (let i = 0; i < 16; i++) {
+            const card = this.gridToCard.get(i);
+            const originalCardName = this.originalCardPositions.get(i);
+            
+            if (!card || !card.gameObject.active) {
+                // Card was matched and removed
+                boardLines.push(`  [${i}] - matched (ignore)`);
+            } else if (card === this.cardOpened) {
+                // Mark currently opened card as matched (ignore) so AI won't suggest it
+                boardLines.push(`  [${i}] - matched (ignore)`);
+            } else {
+                // Check if we've seen this card before at this position
+             
+                if (this.cardPositionSeen[i]) {
+                    // Show the actual card name if it was opened manually at this position
+                    boardLines.push(`  [${i}] - ${originalCardName}`);
+                } else {
+                    boardLines.push(`  [${i}] - -`);
+                }
+            }
+        }
+        
+        return boardLines.join('\n');
+    }
+
+    private highlightSuggestedCard(index: number) {
+        // Clear previous highlight
+        this.clearHighlight();
+
+        if (index >= 0 && index < 16) {
+            const card = this.gridToCard.get(index);
+            if (card && card.gameObject.active) {
+                this.highlightedCard = card;
+                
+                // Create highlight indicator
+                const bounds = card.gameObject.getBounds();
+                this.highlightIndicator = this.add.rectangle(
+                    bounds.centerX, 
+                    bounds.centerY, 
+                    bounds.width + 10, 
+                    bounds.height + 10, 
+                    0xff0000, 
+                    0
+                )
+                .setStrokeStyle(4, 0xff0000)
+                .setDepth(10002);
+
+                // Auto-clear highlight after 3 seconds
+                this.time.delayedCall(3000, () => {
+                    this.clearHighlight();
+                });
+            }
+        }
+    }
+
+    private clearHighlight() {
+        if (this.highlightIndicator) {
+            this.highlightIndicator.destroy();
+            this.highlightIndicator = undefined;
+        }
+        this.highlightedCard = undefined;
+    }
+
+    private suggestRandomCard() {
+        console.log('Using fallback: suggesting random card');
+        
+        // Find all valid cards (not matched, not currently opened)
+        const validCards: number[] = [];
+        for (let i = 0; i < 16; i++) {
+            const card = this.gridToCard.get(i);
+            if (card && card.gameObject.active && card !== this.cardOpened) {
+                validCards.push(i);
+            }
+        }
+        
+        if (validCards.length > 0) {
+            const randomIndex = validCards[Math.floor(Math.random() * validCards.length)];
+            console.log('Fallback suggested card index:', randomIndex);
+            this.highlightSuggestedCard(randomIndex);
+        } else {
+            console.log('No valid cards found for fallback');
         }
     }
 

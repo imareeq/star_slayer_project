@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data = '',
       model = 'sonar',
       messages,
-      systemPrompt = 'You are an AI assistant that helps make decisions based on provided data. Analyze the given information and provide a clear, concise decision with reasoning. Focus on practical, actionable advice.',
+      systemPrompt = 'You are an AI assistant that helps make decisions based on provided data.',
       userPrompt,
       max_tokens = 500,
       temperature = 0.7
@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!apiKey) {
       return res.status(500).json({ 
         error: 'PERPLEXITY_API_KEY environment variable is not set',
-        message: 'Please set your Perplexity API key in environment variables'
+        message: 'Set your Perplexity API key in environment variables'
       })
     }
     
@@ -79,6 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       console.log('Making request to Perplexity API...')
       console.log('Request body:', JSON.stringify(requestBody, null, 2))
+      console.log('Final messages:', JSON.stringify(finalMessages, null, 2))
       
       const response: Response = await fetch(url, {
         method: 'POST',
@@ -98,9 +99,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const apiResponse: any = await response.json()
       console.log('Perplexity API response received')
+      console.log('Full API response:', JSON.stringify(apiResponse, null, 2))
       
       // Extract the AI response
       const aiResponse = apiResponse.choices?.[0]?.message?.content || 'No response generated'
+      console.log('Extracted AI response:', aiResponse)
       
       res.status(200).json({ 
         success: true,
