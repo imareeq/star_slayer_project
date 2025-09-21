@@ -225,7 +225,8 @@ export class DataTrainingGame extends Scene {
                 await this.trainingDataPromise;
             }
             this.createPromptText(this.currentPromptIndex);
-            this.layout();
+
+            this.events.once("promptTextLoaded", this.layout, this);
 
             this.startGame();
         });
@@ -426,7 +427,7 @@ export class DataTrainingGame extends Scene {
         if (this.promptText) {
             this.promptText.destroy();
         }
-        
+
         this.promptText = this.add
             .text(0, 0, this.prompts[this.currentPromptIndex].prompt_text, {
                 fontFamily: "Arial",
@@ -436,6 +437,8 @@ export class DataTrainingGame extends Scene {
             .setDepth(110)
             .setOrigin(0.5)
             .setVisible(false);
+
+        this.events.emit("promptTextLoaded");
     }
 
     private createOptionButtons(promptId: number) {
@@ -514,13 +517,10 @@ export class DataTrainingGame extends Scene {
                 }
             );
             this.terminalContainer.destroy();
-
-            this.terminalContainer = null!;
         }
 
         if (this.minigameTerminal) {
             this.minigameTerminal.destroy();
-            this.minigameTerminal = null!;
         }
     }
 
@@ -543,13 +543,11 @@ export class DataTrainingGame extends Scene {
     }
 
     private restartGame() {
-        this.selected = [];
-        this.optionButtons = [];
-        this.optionTexts = [];
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once(
             Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE,
             () => {
+                this.cleanup();
                 this.scene.restart();
             }
         );
@@ -563,12 +561,18 @@ export class DataTrainingGame extends Scene {
         const scaleY = Math.floor(h / this.background.height);
         const scale = Math.min(scaleX, scaleY);
 
-        this.background.setScale(scale);
-        this.background.setPosition(w / 2, h / 2);
+        if (this.background) {
+            this.background.setScale(scale);
+            this.background.setPosition(w / 2, h / 2);
+        }
 
-        // Position settings button in top right
-        this.settingsButton.setPosition(w - 50, 30);
-        this.settingsText.setPosition(w - 50, 30);
+        if (this.settingsButton) {
+            this.settingsButton.setPosition(w - 50, 30);
+        }
+
+        if (this.settingsText) {
+            this.settingsText.setPosition(w - 50, 30);
+        }
 
         if (this.minigameTerminal) {
             this.minigameTerminal.setScale(scale * 0.75);
@@ -603,7 +607,7 @@ export class DataTrainingGame extends Scene {
                 );
             }
 
-            if (this.promptText) {
+            if (this.promptText && this.promptText.active) {
                 this.promptText.setPosition(
                     this.minigameTerminal.x,
                     terminalY + terminalHeight * 0.3
@@ -633,84 +637,44 @@ export class DataTrainingGame extends Scene {
         }
     };
 
-    private cleanup() {
-        const canvas = this.game.canvas as HTMLCanvasElement;
-        if (canvas && this.canvasClickHandler) {
-            canvas.removeEventListener("click", this.canvasClickHandler);
+    cleanup() {
+        if (this.canvasClickHandler) {
+            this.input.off("pointerdown", this.canvasClickHandler);
             this.canvasClickHandler = undefined;
         }
 
-        if (this.terminalContainer) {
-            this.terminalContainer.destroy();
-        }
+        this.terminalContainer?.destroy(true);
+        this.pauseMenu?.destroy(true);
+        this.submitContainer?.destroy(true);
 
-        if (this.cutsceneOverlay) {
-            this.cutsceneOverlay.destroy();
-        }
+        this.cutsceneOverlay?.destroy();
+        this.pauseOverlay?.destroy();
 
-        if (this.cutsceneText) {
-            this.cutsceneText.destroy();
-        }
+        this.cutsceneText?.destroy();
+        this.promptText?.destroy();
+        this.counterText?.destroy();
+        this.settingsText?.destroy();
+        this.winnerText?.destroy();
+        this.gameOverText?.destroy();
 
-        if (this.settingsButton) {
-            this.settingsButton.destroy();
-        }
-
-        if (this.focusIndicator) {
-            this.focusIndicator.destroy();
-        }
-
-        if (this.settingsText) {
-            this.settingsText.destroy();
-        }
-
-        if (this.pauseOverlay) {
-            this.pauseOverlay.destroy();
-        }
-
-        if (this.pauseMenu) {
-            this.pauseOverlay.destroy();
-        }
-
-        if (this.minigameTerminal) {
-            this.minigameTerminal.destroy();
-        }
-
-        if (this.progressBar) {
-            this.progressBar.destroy();
-        }
-
-        if (this.background) {
-            this.background.destroy();
-        }
-
-        if (this.promptText) {
-            this.promptText.destroy();
-        }
-
-        if (this.counterText) {
-            this.counterText.destroy();
-        }
-
-        if (this.submitContainer) {
-            this.submitContainer.destroy();
-        }
-
-        if (this.winnerText) {
-            this.winnerText.destroy();
-        }
-
-        if (this.gameOverText) {
-            this.gameOverText.destroy();
-        }
-
-        this.currentProgress = 0;
+        this.focusIndicator?.destroy();
+        this.settingsButton?.destroy();
+        this.buttons.forEach((btn) => btn.destroy());
+        this.buttons = [];
+        this.optionButtons.forEach((btn) => btn.destroy());
         this.optionButtons = [];
+        this.optionTexts.forEach((txt) => txt.destroy());
         this.optionTexts = [];
         this.selected = [];
 
-        this.scale.off("resize", this.layout, this);
-        this.input.keyboard?.off("keydown-Q");
+        this.background?.destroy();
+        this.minigameTerminal?.destroy();
+        this.progressBar?.destroy();
+
+        this.focusIndex = -1;
+        this.isPaused = false;
+        this.currentProgress = 0;
+        this.currentPromptIndex = 0;
     }
 
     private createSettingsButton() {
@@ -826,7 +790,7 @@ export class DataTrainingGame extends Scene {
 
     private restartScene() {
         this.isPaused = false;
-        this.scene.restart();
+        this.restartGame();
     }
 }
 
